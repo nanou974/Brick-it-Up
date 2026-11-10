@@ -1,0 +1,8 @@
+{
+  "appId": "com.nanou974.brickitup",
+  "appName": "Brick'it Up",
+  "webDir": "www",
+  "android": {
+    "backgroundColor": "#8FCFF5"
+  }
+}

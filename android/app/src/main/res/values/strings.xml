@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Brick\'it Up</string>
+    <string name="title_activity_main">Brick\'it Up</string>
+    <string name="package_name">com.nanou974.brickitup</string>
+    <string name="custom_url_scheme">com.nanou974.brickitup</string>
+</resources>

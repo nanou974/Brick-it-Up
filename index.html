@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#8FCFF5">
+<title>Brick'it Up</title>
+<link rel="icon" href="assets/icon/brick-it-up-icon-512.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="src/game/style.css">
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/"}}</script>
+</head>
+<body>
+<div id="app">
+  <canvas id="gl"></canvas>
+
+  <!-- Barre du haut : crédits, étoiles, paramètres -->
+  <div id="top">
+    <div class="pill" id="pill-credits"><span class="ico" id="i-coin"></span><span id="v-credits">0</span></div>
+    <div class="pill" id="pill-stars"><span class="ico" id="i-star"></span><span id="v-stars">0</span></div>
+    <button class="round" id="b-menu" aria-label="Paramètres"><span class="ico" id="i-gear"></span></button>
+  </div>
+
+  <!-- Maison et étape en cours -->
+  <div id="head">
+    <div id="v-level">MAISON 1</div>
+    <div id="v-house">Cabanon</div>
+    <div id="stagebox">
+      <div id="v-stage">FONDATIONS</div>
+      <div class="bar"><div id="bar-stage"></div></div>
+      <div id="v-stagecount">0 / 16 parpaings</div>
+    </div>
+  </div>
+  <div id="banner"></div>
+
+  <!-- Bouton de pose -->
+  <div id="posebox">
+    <button id="b-pose" aria-label="Poser">
+      <svg id="ring" viewBox="0 0 120 120"><circle cx="60" cy="60" r="54" class="ring-bg"/><circle cx="60" cy="60" r="54" class="ring-fg" id="ring-fg"/></svg>
+      <span class="ico" id="i-stage"></span>
+      <span id="v-stock">0</span>
+    </button>
+    <div id="v-posehint">Livraison dans 10 s</div>
+  </div>
+
+  <!-- Améliorations -->
+  <div id="cards"></div>
+  <div id="v-total">0 %</div>
+
+  <!-- Écran titre -->
+  <div class="panel show" id="p-start">
+    <div class="box">
+      <div class="logo">Brick<span>'</span>it <b>Up</b></div>
+      <p>Pose les éléments livrés par le camion, améliore ton chantier et construis des maisons de plus en plus grandes !</p>
+      <button class="btn big" id="b-start">JOUER</button>
+      <div class="ver" id="v-version"></div>
+    </div>
+  </div>
+
+  <!-- Maison terminée -->
+  <div class="panel" id="p-done">
+    <div class="box">
+      <div class="title">BRAVO !</div>
+      <p id="v-donetxt"></p>
+      <div class="starbig" id="i-starbig"></div>
+      <p class="small" id="v-donebonus"></p>
+      <button class="btn big" id="b-next">MAISON SUIVANTE</button>
+    </div>
+  </div>
+
+  <!-- Pendant ton absence -->
+  <div class="panel" id="p-away">
+    <div class="box">
+      <div class="title">PENDANT TON ABSENCE</div>
+      <p id="v-awaytxt"></p>
+      <button class="btn big" id="b-away">SUPER !</button>
+    </div>
+  </div>
+
+  <!-- Paramètres -->
+  <div class="panel" id="p-menu">
+    <div class="box">
+      <div class="title">PARAMÈTRES</div>
+      <label class="row">Sons <input type="range" id="r-sfx" min="0" max="100" value="80"></label>
+      <button class="btn" id="b-reset">RECOMMENCER À ZÉRO</button>
+      <button class="btn big" id="b-menuclose">FERMER</button>
+      <div class="ver" id="v-version2"></div>
+    </div>
+  </div>
+</div>
+<script type="module" src="src/game/main.js"></script>
+</body>
+</html>
