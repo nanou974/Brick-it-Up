@@ -354,6 +354,7 @@ export class Site {
       const cur = this.truck.position.x;
       this.truck.position.x = x > cur + 20 ? x : cur + (x - cur) * Math.min(1, dt * 10);
       this.truck.rotation.y = Math.PI; // il roule vers la gauche
+      this.truckSpeed = Math.abs(this.truck.position.x - cur) / Math.max(dt, 1e-3); // pour le bruit du moteur
       this.truckKick = Math.max(0, (this.truckKick || 0) - dt * 5);
       this.truck.rotation.z = this.truckKick * 0.06;
     }

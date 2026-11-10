@@ -54,16 +54,31 @@ game.on('place', (it, gain, byWorker, index) => {
   site.addItem(index, true);
   site.updateGhost(game);
   site.setStock(game.s.stock, game.p.cap);
-  sfx.place(it.stage);
+  // Poses très rapprochées (doigt maintenu, équipe nombreuse) : bruit raccourci pour ne pas saturer
+  const nowP = performance.now(); sfx.place(it.stage, nowP - lastPlaceAt < 160); lastPlaceAt = nowP;
   if (byWorker) { site.workerHop(); floatGain(`+${fmt(gain)}`, true); } else floatGain(`+${fmt(gain)}`);
   if (game.stage !== lastStage && !game.done) { lastStage = game.stage; banner(`${STAGES[game.stage].name.toUpperCase()} !`); }
   if (game.done) { setTimeout(finishHouse, 900); }
   dirtyCards = true;
 });
-game.on('deliver', () => {
+let lastPlaceAt = 0, braked = false;
+game.on('deliver', (n) => {
   const p = game.p; site.deliver(p.delivery); site.setStock(game.s.stock, p.cap);
-  if (p.delivery >= 2.5) sfx.deliver();
+  braked = false;
+  // Déchargement : complet quand le camion fait l'aller-retour, discret quand les livraisons s'enchaînent
+  if (p.delivery >= 2.5) { if (!brakePending) sfx.brake(); sfx.unload(Math.min(4, 1 + n)); sfx.horn(0.55); }
+  else if (p.delivery >= 1) sfx.unload(2, true);
+  brakePending = false;
 });
+let brakePending = false;
+// Freins juste avant l'arrivée du camion (aller-retour seulement)
+function truckSounds(dt) {
+  const p = game.p, s = game.s;
+  const full = s.stock >= Math.min(p.cap, game.remaining) || game.done;
+  if (!braked && !full && p.delivery >= 2.5 && p.delivery - s.deliveryT < 0.4) { braked = true; brakePending = true; sfx.brake(); }
+  const x = site.truck ? site.truck.position.x : 99;
+  sfx.engineUpdate(Math.max(0, 1 - Math.abs(x) / 26), site.truckSpeed || 0, dt);
+}
 
 // Texte « +3 » qui s'envole au-dessus du bouton de pose
 function floatGain(txt, small = false) {
@@ -241,6 +256,7 @@ function frame(now) {
   game.update(dt);
   updateHold(dt);
   site.update(dt, game);
+  truckSounds(dt);
   ring();
   uiT -= dt; if (uiT <= 0) { uiT = 0.1; refresh(); }
   saveT += dt; if (saveT > 5) { saveT = 0; save(); }

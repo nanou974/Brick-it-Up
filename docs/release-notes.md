@@ -1,8 +1,15 @@
-## Brick'it Up v0.2.0
+## Brick'it Up v0.3.0
 
 Télécharge l'APK ci-dessous et ouvre-le : il s'installe par-dessus la version précédente, ta partie est conservée.
 
-## Nouveautés
-- **Musique d'ambiance** légère et enjouée (marimba, ukulélé, basse ronde, percussions douces), en boucle. Réglage du volume de la musique et des sons dans les paramètres.
-- **Reste appuyé** sur le bouton pour poser les éléments à la suite, de plus en plus vite. Si le stock est vide, la pose reprend dès que le camion livre, tant que le doigt reste sur le bouton.
-- **Tapote le chantier** pour que le camion arrive plus vite : chaque tape fait gagner 0,1 s (au plus 60 % de l'attente par livraison). On voit le camion approcher sur la route et avancer à chaque tape.
+## Nouveautés : bruitages de chantier
+- **Un bruit par matériau**, un peu différent à chaque pose :
+  - parpaing : choc lourd et coup de truelle ;
+  - brique : claquement sec, tintement de truelle, mortier ;
+  - poutre : bois qui cogne et coups de marteau ;
+  - tuile : tintement de terre cuite ;
+  - fenêtre et porte : clic du cadre et coup de visseuse ;
+  - finitions : coup de pelle et feuillage.
+- Quand on reste appuyé ou que l'équipe pose très vite, les bruits se raccourcissent pour rester agréables.
+- **Le camion** : moteur diesel qui grossit quand il approche et accélère au départ, freins et « pschhh » à l'arrivée, parpaings déchargés sur la palette, double coup de klaxon en repartant. Chaque tape sur le chantier fait rugir le moteur.
+- Quand les livraisons s'enchaînent très vite, le camion reste garé au ralenti et le déchargement devient discret.

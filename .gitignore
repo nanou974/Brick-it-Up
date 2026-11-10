@@ -1,6 +1,6 @@
-node_modules/
-.DS_Store
 *.log
-www/
-tools/out/
+.DS_Store
 assets/music/theme-preview.mp3
+node_modules/
+tools/out/
+www/
