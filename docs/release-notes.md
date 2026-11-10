@@ -1,10 +1,8 @@
-## Brick'it Up v0.1.0 — premier prototype
+## Brick'it Up v0.2.0
 
-Télécharge l'APK ci-dessous et ouvre-le pour l'installer.
+Télécharge l'APK ci-dessous et ouvre-le : il s'installe par-dessus la version précédente, ta partie est conservée.
 
-- Le camion livre les matériaux, touche le gros bouton pour les poser : chaque élément tombe à sa place et rapporte des crédits.
-- 6 étapes par maison : fondations, murs, charpente, toiture, menuiseries, finitions.
-- 10 maisons, du cabanon au château, puis la liste recommence en plus grand.
-- 5 améliorations (rapport, livraison, camion, entrepôt, ouvriers) avec un palier toutes les 5 améliorations.
-- Les ouvriers travaillent même quand le jeu est fermé (jusqu'à 8 h).
-- Une étoile par maison terminée : +5 % de crédits pour toujours.
+## Nouveautés
+- **Musique d'ambiance** légère et enjouée (marimba, ukulélé, basse ronde, percussions douces), en boucle. Réglage du volume de la musique et des sons dans les paramètres.
+- **Reste appuyé** sur le bouton pour poser les éléments à la suite, de plus en plus vite. Si le stock est vide, la pose reprend dès que le camion livre, tant que le doigt reste sur le bouton.
+- **Tapote le chantier** pour que le camion arrive plus vite : chaque tape fait gagner 0,1 s (au plus 60 % de l'attente par livraison). On voit le camion approcher sur la route et avancer à chaque tape.

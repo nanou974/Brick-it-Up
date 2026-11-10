@@ -14,6 +14,7 @@ const copy = (from, to) => { fs.mkdirSync(path.dirname(path.join(www, to)), { re
 // Code du jeu et images utilisées par l'interface
 copy('src', 'src');
 copy('assets/icon', 'assets/icon');
+copy('assets/music/theme.ogg', 'assets/music/theme.ogg'); // musique pré-calculée (tools/music-render.mjs)
 
 // Three.js et les deux modules complémentaires utilisés
 for (const f of ['build/three.module.js', 'build/three.core.js', 'examples/jsm/utils/BufferGeometryUtils.js']) {

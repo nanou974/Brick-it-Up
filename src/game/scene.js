@@ -293,10 +293,17 @@ export class Site {
     this.truck.position.z = this.roadZ ?? 10;
   }
   // Livraison : le camion arrive, s'arrête devant la palette et repart (ou reste garé si les livraisons s'enchaînent)
+  // Entre deux livraisons, le camion avance sur la route au rythme du minuteur : on le voit approcher
+  // (et chaque tape sur l'écran le fait avancer d'un coup). À la livraison, il marque l'arrêt puis repart.
   deliver(interval) {
+    if (!this.truck || interval < 2.5) return;
+    this.truckAnim = { t: 0 };
+  }
+  // Tape sur l'écran : petit coup d'accélérateur (fumée à l'échappement, le camion se cabre)
+  rushTruck() {
     if (!this.truck) return;
-    if (interval < 2.5) { this.truckAnim = { parked: true, t: 0 }; return; }
-    this.truckAnim = { t: 0, dur: Math.min(3, interval * 0.8) };
+    const p = this.truck.position; this.puff(p.x + 2.2, 0.5, p.z + 0.5, 3, 0x9AA0A6);
+    this.truckKick = 1;
   }
 
   update(dt, game) {
@@ -327,15 +334,28 @@ export class Site {
     }
     // Camion
     if (this.truck) {
-      const tz = this.roadZ, stopX = this.palletPos.x + 0.6;
+      const tz = this.roadZ, stopX = this.palletPos.x + 1.6;
       this.truck.position.z = tz;
-      const a = this.truckAnim;
-      if (a?.parked) this.truck.position.x += (stopX - this.truck.position.x) * Math.min(1, dt * 3);
-      else if (a) {
-        a.t += dt; const u = a.t / a.dur;
-        this.truck.position.x = u < 0.4 ? THREE.MathUtils.lerp(-45, stopX, 1 - Math.pow(1 - u / 0.4, 2)) : u < 0.65 ? stopX : THREE.MathUtils.lerp(stopX, 45, Math.pow((u - 0.65) / 0.35, 2));
-        if (u >= 1) this.truckAnim = null;
-      } else this.truck.position.x = -60;
+      const p = game.p, s = game.s, a = this.truckAnim;
+      const full = s.stock >= Math.min(p.cap, game.remaining) || game.done;
+      let x;
+      if (p.delivery < 2.5 || (full && !a)) x = stopX;                 // livraisons en continu ou entrepôt plein : garé
+      else if (a) {                                                      // arrêt devant la palette, puis départ
+        a.t += dt;
+        x = a.t < 0.45 ? stopX : THREE.MathUtils.lerp(stopX, -50, Math.pow((a.t - 0.45) / 0.9, 2));
+        if (a.t > 1.35) this.truckAnim = null;
+      } else {                                                           // approche au rythme du minuteur
+        // il entre vite dans le champ, puis avance pas à pas vers la palette
+        // (il arrive par la droite, la palette est à gauche : tout le trajet reste à l'écran)
+        const k = Math.min(1, s.deliveryT / p.delivery), edge = this.plan.w / 2 + 5;
+        x = k < 0.08 ? THREE.MathUtils.lerp(50, edge, k / 0.08) : THREE.MathUtils.lerp(edge, stopX, (k - 0.08) / 0.92);
+      }
+      // Lissage (sauf quand il réapparaît au loin à droite)
+      const cur = this.truck.position.x;
+      this.truck.position.x = x > cur + 20 ? x : cur + (x - cur) * Math.min(1, dt * 10);
+      this.truck.rotation.y = Math.PI; // il roule vers la gauche
+      this.truckKick = Math.max(0, (this.truckKick || 0) - dt * 5);
+      this.truck.rotation.z = this.truckKick * 0.06;
     }
     // Caméra : tourne doucement autour du chantier, monte avec la construction
     if (!this.drag) this.orbitTarget += (Math.sin(this.time * 0.12) * 0.35 - this.orbitTarget) * dt * 0.05;

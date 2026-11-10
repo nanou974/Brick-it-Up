@@ -27,7 +27,13 @@ function save() { try { game.s.lastSeen = Date.now(); localStorage.setItem(SAVE_
 const game = new Game(load());
 const site = new Site($('gl'));
 const sfx = new Sound();
-try { const v = JSON.parse(localStorage.getItem(VOL_KEY)); if (typeof v === 'number') { sfx.setVolume(v); $('r-sfx').value = Math.round(v * 100); } } catch {}
+// Volumes enregistrés : { sfx, music } (ancien format : un seul nombre pour les sons)
+const vols = { sfx: 0.8, music: 0.6 };
+try { const v = JSON.parse(localStorage.getItem(VOL_KEY)); if (typeof v === 'number') vols.sfx = v; else if (v) Object.assign(vols, v); } catch {}
+sfx.setVolume(vols.sfx); sfx.setMusicVolume(vols.music);
+$('r-sfx').value = Math.round(vols.sfx * 100); $('r-music').value = Math.round(vols.music * 100);
+const saveVols = () => { try { localStorage.setItem(VOL_KEY, JSON.stringify(vols)); } catch {} };
+sfx.loadMusic('assets/music/theme.ogg');
 
 // Icônes fixes
 $('i-coin').innerHTML = COIN; $('i-star').innerHTML = STAR; $('i-gear').innerHTML = GEAR; $('i-starbig').innerHTML = STAR;
@@ -69,11 +75,48 @@ function floatGain(txt, small = false) {
 function banner(txt) { const b = $('banner'); b.textContent = txt; b.classList.remove('go'); void b.offsetWidth; b.classList.add('go'); }
 
 // ---------- Bouton de pose ----------
+// Une touche pose un élément ; en restant appuyé, les poses s'enchaînent de plus en plus vite
+// (dès qu'un élément arrive, il est posé tant que le doigt reste sur le bouton).
+const HOLD_DELAY = 0.35, HOLD_START = 0.2, HOLD_MIN = 0.07;
+let hold = null;
+function poseOnce(fromHold) {
+  const b = $('b-pose');
+  if (!game.place()) {
+    if (!fromHold) { sfx.denied(); b.classList.remove('shake'); void b.offsetWidth; b.classList.add('shake'); }
+    return false;
+  }
+  b.classList.add('hit'); setTimeout(() => b.classList.remove('hit'), 70);
+  return true;
+}
 $('b-pose').addEventListener('pointerdown', (e) => {
   e.preventDefault(); sfx.unlock();
-  const b = $('b-pose');
-  if (!game.place()) { sfx.denied(); b.classList.remove('shake'); void b.offsetWidth; b.classList.add('shake'); return; }
-  b.classList.add('hit'); setTimeout(() => b.classList.remove('hit'), 80);
+  try { $('b-pose').setPointerCapture(e.pointerId); } catch {}
+  poseOnce(false);
+  hold = { t: -HOLD_DELAY, every: HOLD_START, id: e.pointerId };
+});
+const endHold = (e) => { if (hold && (!e || e.pointerId === hold.id)) hold = null; };
+for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) $('b-pose').addEventListener(ev, endHold);
+function updateHold(dt) {
+  if (!hold) return;
+  hold.t += dt;
+  while (hold.t >= hold.every) {
+    hold.t -= hold.every;
+    if (poseOnce(true)) hold.every = Math.max(HOLD_MIN, hold.every * 0.88); // accélère à chaque pose réussie
+    else { hold.t = Math.min(hold.t, 0); break; }                           // stock vide : on attend la livraison
+  }
+}
+
+// Tapoter le chantier : le camion arrive plus vite
+let rushCombo = 0, rushLast = 0;
+$('gl').addEventListener('pointerdown', (e) => {
+  sfx.unlock();
+  const g = game.rush(); if (!g) return;
+  const now = performance.now(); rushCombo = now - rushLast < 400 ? Math.min(rushCombo + 1, 12) : 0; rushLast = now;
+  sfx.rush(rushCombo);
+  const el = document.createElement('div'); el.className = 'gain rush'; el.textContent = '−0,1 s';
+  el.style.left = `${e.clientX}px`; el.style.top = `${e.clientY - 20}px`; $('app').appendChild(el); setTimeout(() => el.remove(), 700);
+  const r = $('ring-fg'); r.classList.remove('flash'); void r.getBBox(); r.classList.add('flash');
+  site.rushTruck();
 });
 
 // ---------- Améliorations ----------
@@ -174,13 +217,14 @@ function catchUp() {
   if (game.done) finishHouse();
 }
 $('b-away').addEventListener('click', () => show('p-away', false));
-document.addEventListener('visibilitychange', () => { if (document.hidden) save(); else catchUp(); });
+document.addEventListener('visibilitychange', () => { if (document.hidden) { save(); sfx.pause(true); } else { sfx.pause(false); catchUp(); } });
 addEventListener('pagehide', save);
 
 // ---------- Menu ----------
 $('b-menu').addEventListener('click', () => { sfx.unlock(); show('p-menu', true); });
 $('b-menuclose').addEventListener('click', () => { show('p-menu', false); disarm(); });
-$('r-sfx').addEventListener('input', (e) => { const v = e.target.value / 100; sfx.setVolume(v); try { localStorage.setItem(VOL_KEY, JSON.stringify(v)); } catch {} });
+$('r-sfx').addEventListener('input', (e) => { vols.sfx = e.target.value / 100; sfx.setVolume(vols.sfx); saveVols(); });
+$('r-music').addEventListener('input', (e) => { sfx.unlock(); vols.music = e.target.value / 100; sfx.setMusicVolume(vols.music); saveVols(); });
 let armed = 0;
 function disarm() { armed = 0; $('b-reset').classList.remove('armed'); $('b-reset').textContent = 'RECOMMENCER À ZÉRO'; }
 $('b-reset').addEventListener('click', () => {
@@ -195,6 +239,7 @@ let last = performance.now(), uiT = 0, saveT = 0;
 function frame(now) {
   const dt = Math.min(0.1, (now - last) / 1000); last = now;
   game.update(dt);
+  updateHold(dt);
   site.update(dt, game);
   ring();
   uiT -= dt; if (uiT <= 0) { uiT = 0.1; refresh(); }
@@ -204,4 +249,4 @@ function frame(now) {
 catchUp();
 requestAnimationFrame(frame);
 // Accès de débogage pour les tests automatiques
-window.__bu = { game, site, save };
+window.__bu = { game, site, save, sfx };

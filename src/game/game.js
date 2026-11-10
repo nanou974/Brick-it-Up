@@ -3,6 +3,7 @@ import { STAGES, UPGRADES, houseFor, params, itemValue, upgradeCost, tierOf, TIE
 import { buildHouse, stageCounts } from './house.js';
 
 export const OFFLINE_MAX = 8 * 3600; // on rattrape au plus 8 h d'absence
+export const RUSH_TAP = 0.1, RUSH_MAX = 0.6; // tape sur l'écran : 0,1 s gagnée, 60 % de l'intervalle au plus
 
 export function freshState() {
   return { v: 1, level: 1, stars: 0, credits: 0, placed: 0, stock: 0, deliveryT: 0, workerT: 0, up: Object.fromEntries(UPGRADES.map(u => [u.key, 0])), total: 0, lastSeen: Date.now() };
@@ -38,7 +39,8 @@ export class Game {
   nextValue() { return itemValue(this.stage, this.s.level, this.p); }
 
   // Avance le temps : livraisons du camion et pose automatique par les ouvriers
-  update(dt) {
+  // rushOnly : seul le minuteur de livraison avance (tape sur l'écran), pas les ouvriers
+  update(dt, rushOnly = false) {
     const s = this.s, p = this.p;
     if (this.done) return;
     const room = () => Math.min(p.cap, this.remaining) - s.stock;
@@ -47,16 +49,27 @@ export class Game {
       s.deliveryT += dt;
       while (s.deliveryT >= p.delivery && room() > 0) {
         s.deliveryT -= p.delivery;
-        const n = Math.min(p.batch, room()); s.stock += n; this.emit('deliver', n);
+        const n = Math.min(p.batch, room()); s.stock += n; s.rushT = 0; this.emit('deliver', n);
       }
       if (room() <= 0) s.deliveryT = 0;
     } else s.deliveryT = 0;
     // Ouvriers : chacun pose un élément toutes les workerTime secondes, s'il y a du stock
-    if (p.workers > 0) {
+    if (p.workers > 0 && !rushOnly) {
       s.workerT += dt * p.workers;
       while (s.workerT >= p.workerTime && s.stock > 0 && !this.done) { s.workerT -= p.workerTime; this.place(true); }
       if (s.stock === 0) s.workerT = Math.min(s.workerT, p.workerTime);
     }
+  }
+
+  // Tape sur l'écran : la prochaine livraison arrive un peu plus vite.
+  // Chaque tape avance le camion de 0,1 s, au plus 60 % de l'intervalle par livraison (l'amélioration reste utile).
+  rush() {
+    const s = this.s, p = this.p;
+    if (this.done || Math.min(p.cap, this.remaining) - s.stock <= 0) return 0;
+    const left = p.delivery * RUSH_MAX - (s.rushT || 0), gain = Math.min(RUSH_TAP, left);
+    if (gain <= 0) return 0;
+    s.rushT = (s.rushT || 0) + gain; this.update(gain, true);
+    return gain;
   }
 
   // Pose un élément (bouton ou ouvrier). Renvoie l'élément posé, ou null.

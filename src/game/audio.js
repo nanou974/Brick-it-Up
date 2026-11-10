@@ -1,12 +1,31 @@
 // Sons synthétisés (WebAudio) : pose, livraison, achat, palier, maison terminée
 export class Sound {
-  constructor() { this.ctx = null; this.vol = 0.8; this.noiseBuf = null; }
+  constructor() { this.ctx = null; this.vol = 0.8; this.musicVol = 0.6; this.noiseBuf = null; this.musicBuf = null; this.musicSrc = null; }
+  // Musique d'ambiance : fichier pré-calculé (tools/music-render.mjs), joué en boucle parfaite
+  async loadMusic(url) {
+    try { this.musicData = await (await fetch(url)).arrayBuffer(); this.startMusic(); } catch { /* pas de musique : le jeu continue */ }
+  }
+  async startMusic() {
+    if (!this.ctx || this.musicSrc || !this.musicData || this.musicStarting) return;
+    this.musicStarting = true;
+    try {
+      if (!this.musicBuf) this.musicBuf = await this.ctx.decodeAudioData(this.musicData.slice(0));
+      if (this.musicSrc) return;
+      const s = this.musicSrc = this.ctx.createBufferSource(); s.buffer = this.musicBuf; s.loop = true;
+      s.connect(this.musicOut); s.start();
+    } catch { } finally { this.musicStarting = false; }
+  }
+  setMusicVolume(v) { this.musicVol = v; if (this.musicOut) this.musicOut.gain.setTargetAtTime(v * 0.55, this.ctx.currentTime, 0.05); }
+  // Appli en arrière-plan : on coupe tout le son, on le reprend au retour
+  pause(on) { if (!this.ctx) return; on ? this.ctx.suspend() : this.ctx.resume(); }
   unlock() {
     if (!this.ctx) {
       const C = window.AudioContext || window.webkitAudioContext; if (!C) return;
       this.ctx = new C({ latencyHint: 'interactive' });
       this.out = this.ctx.createGain(); this.out.gain.value = this.vol; this.out.connect(this.ctx.destination);
+      this.musicOut = this.ctx.createGain(); this.musicOut.gain.value = this.musicVol * 0.55; this.musicOut.connect(this.ctx.destination);
     }
+    this.startMusic();
     if (this.ctx.state === 'suspended') this.ctx.resume();
   }
   setVolume(v) { this.vol = v; if (this.out) this.out.gain.value = v; }
@@ -36,4 +55,6 @@ export class Sound {
   tier() { [523, 659, 784, 1047].forEach((f, i) => this.tone(f, 0.18, 'triangle', 0.18, i * 0.08)); this.noise(0.4, 0.2, 500); }
   win() { [523, 659, 784, 1047, 784, 1047, 1319].forEach((f, i) => this.tone(f, 0.25, 'triangle', 0.2, i * 0.11)); }
   denied() { this.tone(180, 0.12, 'square', 0.06); }
+  // Tape pour accélérer : petit « tic » de klaxon, de plus en plus aigu quand on enchaîne
+  rush(k) { this.tone(700 + k * 40, 0.04, 'square', 0.035); }
 }
