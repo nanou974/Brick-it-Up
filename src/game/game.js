@@ -90,10 +90,11 @@ export class Game {
     return { tierUp: this.s.up[key] % TIER_STEP === 0, tier: tierOf(this.s.up[key]) };
   }
 
-  // Maison terminée : une étoile (+10 % de gains pour toujours), améliorations remises à zéro, maison suivante
+  // Maison terminée : une étoile (+5 % de gains pour toujours, conservée), puis on repart de zéro
+  // sur la maison suivante : crédits, améliorations, stock et livraison
   nextLevel() {
     const s = this.s; if (!this.done) return false;
-    s.stars++; s.level++; s.placed = 0; s.stock = 0; s.deliveryT = 0; s.workerT = 0;
+    s.stars++; s.level++; s.placed = 0; s.stock = 0; s.deliveryT = 0; s.workerT = 0; s.rushT = 0; s.credits = 0;
     for (const k in s.up) s.up[k] = 0;
     this.loadHouse(); this.emit('level', s.level);
     return true;

@@ -34,7 +34,7 @@ export function houseFor(level) {
 // Les gains et les prix grandissent avec le niveau (×1,7 par maison)
 export const levelMult = (level) => Math.pow(1.7, level - 1);
 // Les prix montent un peu plus vite que les gains : chaque maison demande un peu plus de temps que la précédente
-export const COST_GROWTH = 2.0;
+export const COST_GROWTH = 1.85;
 export const costMult = (level) => Math.pow(COST_GROWTH, level - 1);
 
 // ---------- Améliorations ----------
