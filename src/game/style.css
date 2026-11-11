@@ -136,3 +136,7 @@ button { font-family: inherit; color: inherit; cursor: pointer; border: 0; }
 .look .lname { font-family: 'Nunito', sans-serif; font-weight: 900; font-size: 11px; line-height: 1.1; min-height: 24px; }
 .look .lbtn { font-size: 12px; background: var(--ink); border-radius: 8px; padding: 2px 7px; }
 .look.on .lbtn { background: var(--green); }
+
+/* Petite pièce dans les textes (gain par pose, gains qui s'envolent) */
+.ico.mini { width: 16px; height: 16px; vertical-align: -3px; margin-left: 2px; }
+.gain .ico.mini { width: 0.85em; height: 0.85em; vertical-align: -0.1em; }

@@ -85,7 +85,7 @@ function truckSounds(dt) {
 // Texte « +3 » qui s'envole au-dessus du bouton de pose
 function floatGain(txt, small = false) {
   const b = $('b-pose').getBoundingClientRect(), el = document.createElement('div');
-  el.className = 'gain' + (small ? ' small' : ''); el.textContent = txt;
+  el.className = 'gain' + (small ? ' small' : ''); el.innerHTML = `${txt}<span class="ico mini">${COIN}</span>`;
   el.style.left = `${b.left + b.width / 2 + (Math.random() - 0.5) * (small ? 120 : 40)}px`; el.style.top = `${b.top - 10}px`;
   $('app').appendChild(el); setTimeout(() => el.remove(), 950);
 }
@@ -137,7 +137,7 @@ $('gl').addEventListener('pointerdown', (e) => {
 });
 
 // ---------- Améliorations ----------
-let dirtyCards = true, lastCredits = -1;
+let dirtyCards = true, lastCredits = -1, lastHint = '';
 function effect(key) {
   const a = params(game.s.up, game.s.perks), b = params({ ...game.s.up, [key]: game.s.up[key] + 1 }, game.s.perks);
   switch (key) {
@@ -204,7 +204,10 @@ function refresh(force = false) {
   $('b-pose').classList.toggle('empty', s.stock === 0);
   $('b-pose').classList.toggle('ready', s.stock > 0 && p.workers === 0);
   const full = s.stock >= Math.min(p.cap, game.remaining);
-  $('v-posehint').textContent = game.done ? 'Maison terminée !' : full ? `Entrepôt plein · +${fmt(game.nextValue())} par pose` : s.stock > 0 ? `Touche pour poser · +${fmt(game.nextValue())}` : `Livraison dans ${Math.ceil(p.delivery - s.deliveryT)} s`;
+  // Gain par pose suivi d'une petite pièce, pour qu'on comprenne tout de suite que ce sont des pièces
+  const coin = `<span class="ico mini">${COIN}</span>`, v = fmt(game.nextValue());
+  const hint = game.done ? 'Maison terminée !' : full ? `Entrepôt plein · +${v}${coin} par pose` : s.stock > 0 ? `Touche pour poser · +${v}${coin}` : `Livraison dans ${Math.ceil(p.delivery - s.deliveryT)} s`;
+  if (hint !== lastHint) { $('v-posehint').innerHTML = hint; lastHint = hint; }
   if (force || dirtyCards || s.credits !== lastCredits) { refreshCards(); dirtyCards = false; lastCredits = s.credits; }
 }
 function ring() {
