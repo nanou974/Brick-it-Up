@@ -220,27 +220,79 @@ export class Site {
   // ---------- Aller-retour d'un ouvrier : palette → élément → retour à son poste ----------
   // L'élément n'apparaît sur la maison qu'à l'arrivée de l'ouvrier ; onDone (bruit, gain) est appelé à ce moment-là.
   // Sans ouvrier libre (ils sont tous en route), l'élément est posé directement.
-  workerJob(index, onDone, tripTime) {
+  // Emprise déjà construite (fondations et murs posés) : les ouvriers en font le tour au lieu de la traverser
+  footprint() {
+    let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity;
+    for (let k = 0; k < this.meshes.length; k++) {
+      const it = this.items[k]; if (!this.meshes[k] || !it || it.stage > 1) continue;
+      x0 = Math.min(x0, it.x); x1 = Math.max(x1, it.x); z0 = Math.min(z0, it.z); z1 = Math.max(z1, it.z);
+    }
+    if (x0 === Infinity) return null;
+    const m = 0.8; return { x0: x0 - m, x1: x1 + m, z0: z0 - m, z1: z1 + m };
+  }
+  // Le segment a → b traverse-t-il le rectangle r (intérieur strict) ?
+  crosses(a, b, r) {
+    const e = 0.05, R = { x0: r.x0 + e, x1: r.x1 - e, z0: r.z0 + e, z1: r.z1 - e };
+    let t0 = 0, t1 = 1; const dx = b.x - a.x, dz = b.z - a.z;
+    for (const [pp, q] of [[-dx, a.x - R.x0], [dx, R.x1 - a.x], [-dz, a.z - R.z0], [dz, R.z1 - a.z]]) {
+      if (pp === 0) { if (q < 0) return false; continue; }
+      const t = q / pp; if (pp < 0) { if (t > t1) return false; if (t > t0) t0 = t; } else { if (t < t0) return false; if (t < t1) t1 = t; }
+    }
+    return t0 < t1;
+  }
+  // Chemin le plus court de a à b en contournant le rectangle r par ses coins (graphe de visibilité, 6 points)
+  route(a, b, r) {
+    if (!r || !this.crosses(a, b, r)) return [b];
+    const C = [new THREE.Vector3(r.x0, 0, r.z0), new THREE.Vector3(r.x1, 0, r.z0), new THREE.Vector3(r.x1, 0, r.z1), new THREE.Vector3(r.x0, 0, r.z1)];
+    const N = [a, ...C, b], dist = N.map(() => Infinity), prev = N.map(() => -1), done = N.map(() => false); dist[0] = 0;
+    for (;;) {
+      let u = -1; for (let k = 0; k < N.length; k++) if (!done[k] && dist[k] < Infinity && (u < 0 || dist[k] < dist[u])) u = k;
+      if (u < 0 || u === N.length - 1) break; done[u] = true;
+      for (let v = 0; v < N.length; v++) if (!done[v] && v !== u && !this.crosses(N[u], N[v], r)) {
+        const d = dist[u] + N[u].distanceTo(N[v]); if (d < dist[v]) { dist[v] = d; prev[v] = u; }
+      }
+    }
+    const path = []; for (let v = N.length - 1; v > 0 && v !== -1; v = prev[v]) path.unshift(N[v]);
+    return path.length ? path : [b];
+  }
+  // Point de dépose : à côté de l'élément, ou au bord de la construction s'il est à l'intérieur
+  dropPoint(it, r) {
+    const p = new THREE.Vector3(it.x, 0, it.z);
+    let dx = it.x, dz = it.z; const len = Math.hypot(dx, dz) || 1; dx /= len; dz /= len;
+    if (!r || it.x < r.x0 || it.x > r.x1 || it.z < r.z0 || it.z > r.z1) return p.add(new THREE.Vector3(dx * 0.9, 0, dz * 0.9));
+    const opts = [[r.x0 - 0.1, it.z, it.x - r.x0], [r.x1 + 0.1, it.z, r.x1 - it.x], [it.x, r.z0 - 0.1, it.z - r.z0], [it.x, r.z1 + 0.1, r.z1 - it.z]].sort((a, b) => a[2] - b[2]);
+    return new THREE.Vector3(opts[0][0], 0, opts[0][1]);
+  }
+  // Tape sur le chantier : les ouvriers pressent le pas (cumulable, retombe en une ou deux secondes)
+  boostWorkers() { this.boost = Math.min(1, (this.boost || 0) + 0.15); }
+  idleWorkers() { return this.workers.filter(w => !w.userData.job).length; }
+
+  // Un ouvrier libre va chercher l'élément sur la palette et le porte jusqu'à la maison, à pied (vitesse walkSpeed),
+  // en contournant ce qui est déjà construit. onDone(durée du trajet) est appelé quand l'élément est posé.
+  workerJob(index, onDone) {
     const w = this.workers.find(x => !x.userData.job);
     const it = this.items[index];
-    if (!w || !it) { this.addItem(index, true); onDone(); return; }
-    const pal = this.palletPos.clone().add(new THREE.Vector3(0.3, 0, 1.0));
-    let dx = it.x, dz = it.z; const len = Math.hypot(dx, dz) || 1; dx /= len; dz /= len;
-    const drop = new THREE.Vector3(it.x + dx * 0.9, 0, it.z + dz * 0.9);
-    const u = w.userData, dist = w.position.distanceTo(pal) + pal.distanceTo(drop);
-    u.job = { index, onDone, color: it.color || [0x9AA0A6, 0xC8553D, 0xA4703F, 0xB5512F, 0xF7F7F2, 0x62B04B][it.stage] };
-    u.speed = Math.max(2.4, dist / Math.max(0.6, tripTime - 0.3));
-    u.path = [{ p: pal, act: 'take' }, { p: drop, act: 'drop' }, { p: u.home.clone(), act: 'home' }];
+    if (!w || !it) { this.addItem(index, true); onDone(0); return; }
+    const r = this.footprint();
+    const pal = this.palletPos.clone().add(new THREE.Vector3(0.3, 0, -0.9));
+    const drop = this.dropPoint(it, r), u = w.userData, here = w.position.clone(); here.y = 0;
+    const toPal = this.route(here, pal, r), toDrop = this.route(pal, drop, r), toHome = this.route(drop, u.home.clone(), r);
+    u.job = { index, onDone, start: this.time, color: it.color || [0x9AA0A6, 0xC8553D, 0xA4703F, 0xB5512F, 0xF7F7F2, 0x62B04B][it.stage] };
+    u.speed = this.walkSpeed || 2.2;
+    u.path = [...toPal.slice(0, -1).map(p => ({ p, act: 'via' })), { p: pal, act: 'take' },
+      ...toDrop.slice(0, -1).map(p => ({ p, act: 'via' })), { p: drop, act: 'drop' },
+      ...toHome.slice(0, -1).map(p => ({ p, act: 'via' })), { p: u.home.clone(), act: 'home' }];
     u.pause = 0;
   }
   finishJob(w) {
     const u = w.userData; if (!u.job) return;
     const j = u.job; u.job = null; u.carry.visible = false; u.path = [];
     if (!this.meshes[j.index] && this.items[j.index]) this.addItem(j.index, true);
-    j.onDone();
+    j.onDone(this.time - j.start);
   }
   busy() { return this.workers.some(w => w.userData.job); }
   updateWorkers(dt) {
+    this.boost = Math.max(0, (this.boost || 0) - dt * 0.6);
     for (const w of this.workers) {
       const u = w.userData;
       u.hop = Math.max(0, u.hop - dt * 3);
@@ -253,7 +305,8 @@ export class Site {
         continue;
       }
       // Marche vers l'étape suivante
-      const to = step.p, d = Math.hypot(to.x - w.position.x, to.z - w.position.z), sp = step.act === 'home' ? Math.min(u.speed, 3.2) : u.speed;
+      // Vitesse de marche, augmentée par les tapes sur le chantier (jusqu'à ×2)
+      const to = step.p, d = Math.hypot(to.x - w.position.x, to.z - w.position.z), sp = (this.walkSpeed || u.speed) * (1 + (this.boost || 0));
       if (d > 0.05) {
         const k = Math.min(1, (sp * dt) / d);
         w.position.x += (to.x - w.position.x) * k; w.position.z += (to.z - w.position.z) * k;
@@ -267,9 +320,9 @@ export class Site {
       }
       // Arrivé : prend l'élément à la palette, le dépose sur la maison, ou retourne à son poste
       u.path.shift(); u.legL.rotation.x = u.legR.rotation.x = 0; w.position.y = 0;
-      if (step.act === 'take') { u.carry.material = mat(`porte-${u.job.color}`, u.job.color); u.carry.visible = true; u.pause = 0.15; }
-      else if (step.act === 'drop') { u.pause = 0.1; u.hop = 1; const j = u.job; u.job = null; u.carry.visible = false; if (!this.meshes[j.index] && this.items[j.index]) this.addItem(j.index, true); j.onDone(); }
-      else w.lookAt(0, 0, 0);
+      if (step.act === 'take') { u.carry.material = mat(`porte-${u.job.color}`, u.job.color); u.carry.visible = true; u.pause = 0.35; }
+      else if (step.act === 'drop') { u.pause = 0.25; u.hop = 1; const j = u.job; u.job = null; u.carry.visible = false; if (!this.meshes[j.index] && this.items[j.index]) this.addItem(j.index, true); j.onDone(this.time - j.start); }
+      else if (step.act === 'home') w.lookAt(0, 0, 0);
     }
   }
 

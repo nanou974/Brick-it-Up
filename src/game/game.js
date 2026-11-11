@@ -14,6 +14,7 @@ export function freshState() {
     owned: { truck: ['jaune'], worker: ['orange'], decor: ['prairie'] },
     equip: { truck: 'jaune', worker: 'orange', decor: 'prairie' },
     rate: 0,      // pièces gagnées par seconde de jeu (moyenne glissante), base du revenu hors ligne
+    tripTime: 8,  // durée moyenne d'un aller-retour d'ouvrier (mesurée en jeu), pour le travail hors ligne
     chest: 0,     // pièces gagnées pendant l'absence, à récupérer
     total: 0, lastSeen: Date.now(),
   };
@@ -30,6 +31,7 @@ export class Game {
     if (this.s.v < 2) { this.s.starsTotal = this.s.stars; this.s.v = 2; } // ancienne sauvegarde : les étoiles deviennent une monnaie
     this.listeners = { place: [], deliver: [], level: [] };
     this.earnedTick = 0;
+    this.liveWorkers = false; // true : ce sont les ouvriers visibles qui posent (à la fin de leur trajet)
     this.loadHouse();
   }
   on(ev, fn) { this.listeners[ev].push(fn); }
@@ -70,10 +72,13 @@ export class Game {
       if (room() <= 0) s.deliveryT = 0;
     } else s.deliveryT = 0;
     // Ouvriers : chacun pose un élément toutes les workerTime secondes, s'il y a du stock
-    if (p.workers > 0 && !rushOnly) {
+    // En jeu, les ouvriers visibles posent eux-mêmes (voir main.js) ; hors ligne, on compte un élément
+    // par aller-retour mesuré (tripTime) et par ouvrier
+    if (p.workers > 0 && !rushOnly && !this.liveWorkers) {
+      const per = Math.max(2, s.tripTime || 8);
       s.workerT += dt * p.workers;
-      while (s.workerT >= p.workerTime && s.stock > 0 && !this.done) { s.workerT -= p.workerTime; this.place(true); }
-      if (s.stock === 0) s.workerT = Math.min(s.workerT, p.workerTime);
+      while (s.workerT >= per && s.stock > 0 && !this.done) { s.workerT -= per; this.place(true); }
+      if (s.stock === 0) s.workerT = Math.min(s.workerT, per);
     }
   }
 
@@ -151,12 +156,14 @@ export class Game {
     const p = this.p;
     const away = Math.min(p.offlineHours * 3600, Math.max(0, (now - (this.s.lastSeen || now)) / 1000));
     const before = { credits: this.s.credits, placed: this.s.placed };
-    const silent = this.listeners; this.listeners = { place: [], deliver: [], level: [] };
+    const silent = this.listeners, live = this.liveWorkers; this.listeners = { place: [], deliver: [], level: [] }; this.liveWorkers = false;
     for (let t = 0; t < away && !this.done; t += 1) this.update(Math.min(1, away - t));
-    this.listeners = silent; this.s.lastSeen = now; this.earnedTick = 0;
+    this.listeners = silent; this.liveWorkers = live; this.s.lastSeen = now; this.earnedTick = 0;
     const work = this.s.credits - before.credits, base = Math.floor(away * this.s.rate * p.offlineRate);
     if (away >= 60 && work + base > 0) { this.s.credits -= work; this.s.chest += work + base; }
     return { away, work, base, placed: this.s.placed - before.placed, chest: this.s.chest };
   }
+  // Durée d'un aller-retour d'ouvrier, mesurée en jeu (moyenne glissante)
+  noteTrip(sec) { if (sec > 0.5) this.s.tripTime = this.s.tripTime * 0.9 + sec * 0.1; }
   collectChest() { const c = this.s.chest; this.s.credits += c; this.s.chest = 0; return c; }
 }

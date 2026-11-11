@@ -58,7 +58,7 @@ game.on('place', (it, gain, byWorker, index) => {
   // Bruit de pose (raccourci quand les poses sont très rapprochées) et gain qui s'envole
   const landed = (small) => { const nowP = performance.now(); sfx.place(it.stage, nowP - lastPlaceAt < 160); lastPlaceAt = nowP; floatGain(`+${fmt(gain)}`, small); };
   // Pose par un ouvrier : il va chercher l'élément sur la palette et le porte jusqu'à la maison
-  if (byWorker) site.workerJob(index, () => landed(true), game.p.workerTime * 0.85);
+  if (byWorker) site.workerJob(index, (sec) => { landed(true); game.noteTrip(sec); });
   else { site.addItem(index, true); landed(false); }
   if (game.stage !== lastStage && !game.done) { lastStage = game.stage; banner(`${STAGES[game.stage].name.toUpperCase()} !`); }
   if (game.done) { setTimeout(finishWhenReady, 900); }
@@ -128,6 +128,7 @@ function updateHold(dt) {
 let rushCombo = 0, rushLast = 0;
 $('gl').addEventListener('pointerdown', (e) => {
   sfx.unlock();
+  if (site.workers.length) site.boostWorkers(); // les ouvriers pressent le pas, même si l'entrepôt est plein
   const g = game.rush(); if (!g) return;
   const now = performance.now(); rushCombo = now - rushLast < 400 ? Math.min(rushCombo + 1, 12) : 0; rushLast = now;
   sfx.rush(rushCombo);
@@ -329,12 +330,24 @@ $('b-reset').addEventListener('click', () => {
 });
 $('b-start').addEventListener('click', () => { sfx.unlock(); show('p-start', false); });
 
+// ---------- Ouvriers ----------
+// En jeu, chaque ouvrier visible libre prend un élément du stock et le porte à pied jusqu'à la maison :
+// la cadence vient de leurs trajets. Au-delà de 8 ouvriers (affichés au maximum), les autres les font marcher plus vite.
+game.liveWorkers = true;
+function workersWork() {
+  const n = game.p.workers;
+  site.walkSpeed = 2.2 * (1 + 0.12 * Math.max(0, n - 8));
+  let free = site.idleWorkers();
+  while (free > 0 && game.s.stock > 0 && !game.done) { game.place(true); free--; }
+}
+
 // ---------- Boucle ----------
 addEventListener('resize', () => site.resize());
 let last = performance.now(), uiT = 0, saveT = 0;
 function frame(now) {
   const dt = Math.min(0.1, (now - last) / 1000); last = now;
   game.update(dt);
+  workersWork();
   game.trackRate(dt);
   updateHold(dt);
   site.update(dt, game);
