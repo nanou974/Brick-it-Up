@@ -6,7 +6,7 @@
 - Quand l'entrepôt est plein, le camion attend : il faut poser pour qu'il revienne.
 - **Tapoter le chantier** accélère la livraison : 0,1 s par tape, au plus 60 % de l'intervalle par livraison. Le camion approche sur la route au rythme du minuteur.
 - **Musique** : morceau original en Do majeur, 116 BPM, 32 mesures en boucle, calculé par `tools/music-render.mjs` (assets/music/theme.ogg).
-- Les **ouvriers** font l'aller-retour à pied (2,2 cases/s) : palette → élément → poste, en contournant ce qui est déjà construit (fondations, murs). L'élément tombe à leur arrivée. La cadence vient de leurs trajets : un ouvrier libre prend un élément du stock. Au-delà de 8 ouvriers (affichés au maximum), les autres font marcher l'équipe plus vite (+12 % chacun). Chaque tape sur le chantier fait presser le pas (cumulable jusqu'à ×2, retombe en 1 à 2 s). Hors ligne, on compte un élément par ouvrier et par aller-retour, à la durée mesurée en jeu. Ils posent tout seuls ce qui est en stock, même quand le jeu est fermé (jusqu'à 8 h d'absence rattrapées).
+- Les **ouvriers** font l'aller-retour à pied (2,2 cases/s) : palette → élément → poste, en contournant ce qui est déjà construit (fondations, murs). L'élément tombe à leur arrivée. La cadence vient de leurs trajets : un ouvrier libre prend un élément du stock. Au-delà de 8 ouvriers (affichés au maximum), les autres font marcher l'équipe plus vite (+12 % chacun). Chaque tape sur le chantier fait presser le pas (cumulable jusqu'à ×2, retombe en 1 à 2 s). Ils posent tout seuls ce qui est en stock, même quand le jeu est fermé (jusqu'à 8 h d'absence rattrapées).
 
 ## Étapes d'une maison
 | Étape | Élément | Crédits au niveau 1 |
@@ -71,16 +71,17 @@ Une étoile par maison terminée. Les étoiles sont une monnaie, dépensée dans
 | Gros camion | +1 élément par livraison | 4, 8 |
 | Livraison express | livraisons 10 % plus rapides | 2, 4, 6 |
 | Tapes efficaces | +0,05 s par tape (0,1 → 0,2 s) | 1, 3 |
-| Coffre agrandi | absence rattrapée 8 → 12 → 24 h, revenu hors ligne 25 → 35 → 50 % | 2, 5 |
+| Coffre rapide | un coffre toutes les 20 → 16 → 12 min | 2, 5 |
 | Rapport de base | +10 % de pièces | 1, 2, 3, 4, 5 |
 
 **Personnalisation** : 6 camions (plateau, benne, américain ; plusieurs couleurs), 5 tenues d'ouvriers,
 5 décors (prairie, bord de mer, montagne enneigée, campagne d'automne, ville). 1 à 3 étoiles chacun.
 
-## Hors ligne
-Pendant l'absence (8 h au plus, 24 h avec le coffre agrandi) : le camion livre et les ouvriers posent,
-et le chantier rapporte en plus un revenu de base (25 % du revenu mesuré en jeu sur les 3 dernières minutes,
-jusqu'à 50 %). Tout va dans un **coffre** qu'on récupère à l'ouverture.
+## Coffre du chantier (pas de gain hors ligne)
+Quand l'appli est fermée, le chantier s'arrête : aucune livraison, aucun ouvrier au travail, aucun revenu.
+Un **coffre** se remplit en temps réel toutes les 20 minutes (16 puis 12 avec « Coffre rapide »), même appli fermée.
+Le bouton du coffre (en bas à gauche) affiche le compte à rebours, puis « OUVRIR ! ». Il ne s'accumule pas : un coffre à la fois.
+Contenu tiré à l'ouverture : entre 60 % et 90 % du prix moyen des 5 améliorations à ce moment-là (jamais plus de 90 %).
 
 ## Durée (simulation, joueur actif)
 Cabanon ≈ 6 min, puis de plus en plus long jusqu'au Château ≈ 21 min sans boutique, ≈ 16 min en dépensant ses étoiles (3 h 30 à 4 h 15 pour les 20 maisons).

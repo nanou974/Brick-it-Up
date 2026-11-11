@@ -44,6 +44,9 @@
     <div id="v-posehint">Livraison dans 10 s</div>
   </div>
 
+  <!-- Bouton du coffre du chantier : compte à rebours, puis « OUVRIR ! » -->
+  <button id="b-chest" aria-label="Coffre du chantier"><span class="ico" id="i-chestbtn"></span><span id="v-chesttime">20:00</span></button>
+
   <!-- Améliorations -->
   <div id="cards"></div>
   <div id="v-total">0 %</div>
@@ -69,10 +72,10 @@
     </div>
   </div>
 
-  <!-- Coffre : pièces gagnées pendant l'absence -->
+  <!-- Coffre du chantier (toutes les 20 minutes) -->
   <div class="panel" id="p-away">
     <div class="box">
-      <div class="title">PENDANT TON ABSENCE</div>
+      <div class="title">COFFRE DU CHANTIER</div>
       <div class="chest" id="i-chest"></div>
       <div class="chestsum"><span class="ico" id="i-coin2"></span><span id="v-chest">0</span></div>
       <p class="small" id="v-awaytxt"></p>

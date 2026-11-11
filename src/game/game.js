@@ -1,6 +1,6 @@
 // Moteur de jeu de Brick'it Up : livraisons, pose, ouvriers, achats, fin de maison, boutique d'étoiles,
 // revenu hors ligne. Sans affichage.
-import { STAGES, UPGRADES, PERKS, COSMETICS, houseFor, params, itemValue, upgradeCost, perkCost, tierOf, TIER_STEP } from './rules.js';
+import { STAGES, UPGRADES, PERKS, COSMETICS, houseFor, params, itemValue, upgradeCost, perkCost, tierOf, TIER_STEP, CHEST_MIN_SHARE, CHEST_MAX_SHARE } from './rules.js';
 import { buildHouse, stageCounts } from './house.js';
 
 export const RUSH_MAX = 0.6; // tapes sur l'écran : au plus 60 % de l'intervalle par livraison
@@ -15,7 +15,8 @@ export function freshState() {
     equip: { truck: 'jaune', worker: 'orange', decor: 'prairie' },
     rate: 0,      // pièces gagnées par seconde de jeu (moyenne glissante), base du revenu hors ligne
     tripTime: 8,  // durée moyenne d'un aller-retour d'ouvrier (mesurée en jeu), pour le travail hors ligne
-    chest: 0,     // pièces gagnées pendant l'absence, à récupérer
+    chest: 0,     // (ancien coffre hors ligne : rendu au chargement)
+    chestAt: Date.now() + 20 * 60000, // moment où le prochain coffre du chantier sera prêt
     total: 0, lastSeen: Date.now(),
   };
 }
@@ -29,6 +30,7 @@ export class Game {
     this.s.owned = { ...f.owned, ...(this.s.owned || {}) };
     this.s.equip = { ...f.equip, ...(this.s.equip || {}) };
     if (this.s.v < 2) { this.s.starsTotal = this.s.stars; this.s.v = 2; } // ancienne sauvegarde : les étoiles deviennent une monnaie
+    if (this.s.chest > 0) { this.s.credits += this.s.chest; this.s.chest = 0; } // ancien coffre hors ligne : on rend les pièces
     this.listeners = { place: [], deliver: [], level: [] };
     this.earnedTick = 0;
     this.liveWorkers = false; // true : ce sont les ouvriers visibles qui posent (à la fin de leur trajet)
@@ -148,22 +150,26 @@ export class Game {
     return true;
   }
 
-  // Rattrapage de l'absence :
-  //  - le chantier continue (camion, ouvriers) par pas d'une seconde ;
-  //  - en plus, un revenu de base : une part (25 à 50 %) du revenu mesuré pendant le jeu ;
-  //  - tout ce qui a été gagné va dans le coffre, à récupérer à l'ouverture.
+  // Absence : plus aucun gain hors ligne, le chantier s'arrête quand l'appli est fermée.
+  // (Seul le coffre du chantier continue de se remplir en temps réel.)
   catchUp(now = Date.now()) {
-    const p = this.p;
-    const away = Math.min(p.offlineHours * 3600, Math.max(0, (now - (this.s.lastSeen || now)) / 1000));
-    const before = { credits: this.s.credits, placed: this.s.placed };
-    const silent = this.listeners, live = this.liveWorkers; this.listeners = { place: [], deliver: [], level: [] }; this.liveWorkers = false;
-    for (let t = 0; t < away && !this.done; t += 1) this.update(Math.min(1, away - t));
-    this.listeners = silent; this.liveWorkers = live; this.s.lastSeen = now; this.earnedTick = 0;
-    const work = this.s.credits - before.credits, base = Math.floor(away * this.s.rate * p.offlineRate);
-    if (away >= 60 && work + base > 0) { this.s.credits -= work; this.s.chest += work + base; }
-    return { away, work, base, placed: this.s.placed - before.placed, chest: this.s.chest };
+    const away = Math.max(0, (now - (this.s.lastSeen || now)) / 1000);
+    this.s.lastSeen = now; this.earnedTick = 0;
+    return { away };
+  }
+
+  // ---------- Coffre du chantier ----------
+  chestLeft(now = Date.now()) { return Math.max(0, (this.s.chestAt - now) / 1000); }
+  chestReady(now = Date.now()) { return now >= this.s.chestAt; }
+  // Prix moyen des améliorations en ce moment
+  avgUpgradeCost() { return UPGRADES.reduce((a, u) => a + this.cost(u.key), 0) / UPGRADES.length; }
+  // Tirage du contenu à l'ouverture : entre 60 % et 90 % du prix moyen (jamais plus de 90 %)
+  rollChest() { const k = CHEST_MIN_SHARE + Math.random() * (CHEST_MAX_SHARE - CHEST_MIN_SHARE); return Math.max(1, Math.floor(this.avgUpgradeCost() * k)); }
+  collectChest(amount, now = Date.now()) {
+    if (!this.chestReady(now)) return 0;
+    this.s.credits += amount; this.s.chestAt = now + this.p.chestMinutes * 60000;
+    return amount;
   }
   // Durée d'un aller-retour d'ouvrier, mesurée en jeu (moyenne glissante)
   noteTrip(sec) { if (sec > 0.5) this.s.tripTime = this.s.tripTime * 0.9 + sec * 0.1; }
-  collectChest() { const c = this.s.chest; this.s.credits += c; this.s.chest = 0; return c; }
 }

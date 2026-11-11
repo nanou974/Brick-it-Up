@@ -46,10 +46,12 @@ export const PERKS = [
   { key: 'camion', name: 'Gros camion', desc: (n) => `Le camion livre ${n + 1} éléments dès le départ`, cost: [4, 8] },
   { key: 'express', name: 'Livraison express', desc: (n) => `Livraisons ${n * 10} % plus rapides`, cost: [2, 4, 6] },
   { key: 'tapes', name: 'Tapes efficaces', desc: (n) => `Chaque tape fait gagner ${(0.1 + 0.05 * n).toFixed(2).replace('.', ',')} s`, cost: [1, 3] },
-  { key: 'coffre', name: 'Coffre agrandi', desc: (n) => `Absence rattrapée sur ${OFFLINE_HOURS[n]} h, revenu hors ligne ${Math.round(OFFLINE_RATE[n] * 100)} %`, cost: [2, 5] },
+  { key: 'coffre', name: 'Coffre rapide', desc: (n) => `Un coffre toutes les ${CHEST_MINUTES[n]} min`, cost: [2, 5] },
   { key: 'rapport', name: 'Rapport de base', desc: (n) => `+${n * 10} % de pièces sur chaque élément`, cost: [1, 2, 3, 4, 5] },
 ];
-export const OFFLINE_HOURS = [8, 12, 24], OFFLINE_RATE = [0.25, 0.35, 0.5];
+// Coffre du chantier : un coffre à récupérer toutes les 20 min (16 puis 12 avec « Coffre rapide »).
+// Il contient entre 60 % et 90 % du prix moyen des améliorations au moment où on l'ouvre (jamais plus de 90 %).
+export const CHEST_MINUTES = [20, 16, 12], CHEST_MIN_SHARE = 0.6, CHEST_MAX_SHARE = 0.9;
 export const perkCost = (key, n) => PERKS.find(p => p.key === key).cost[n] ?? null; // null = niveau maximum atteint
 
 // ---------- Personnalisation (achetée avec des étoiles) ----------
@@ -90,8 +92,7 @@ export function params(up, perks = {}) {
     workers,                                                  // chaque ouvrier pose un élément…
     workerTime: Math.max(1.2, 6 * Math.pow(0.93, Math.max(0, workers - 1))), // …toutes les N secondes
     rushTap: 0.1 + 0.05 * (perks.tapes || 0),                 // secondes gagnées par tape sur le chantier
-    offlineHours: OFFLINE_HOURS[perks.coffre || 0],           // absence rattrapée au plus
-    offlineRate: OFFLINE_RATE[perks.coffre || 0],             // part du revenu de jeu gagnée hors ligne
+    chestMinutes: CHEST_MINUTES[perks.coffre || 0],          // intervalle entre deux coffres
   };
 }
 export function itemValue(stageIndex, level, p) {

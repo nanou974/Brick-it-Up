@@ -140,3 +140,11 @@ button { font-family: inherit; color: inherit; cursor: pointer; border: 0; }
 /* Petite pièce dans les textes (gain par pose, gains qui s'envolent) */
 .ico.mini { width: 16px; height: 16px; vertical-align: -3px; margin-left: 2px; }
 .gain .ico.mini { width: 0.85em; height: 0.85em; vertical-align: -0.1em; }
+
+/* ---------- Bouton du coffre du chantier ---------- */
+#b-chest { position: absolute; left: 12px; bottom: calc(env(safe-area-inset-bottom) + 200px); z-index: 5; width: 70px; display: flex; flex-direction: column; align-items: center; gap: 2px; background: var(--pill); border-radius: 14px; padding: 6px 4px 5px; box-shadow: 0 3px 0 rgba(0,0,0,0.25); }
+#b-chest .ico { width: 44px; height: 44px; filter: grayscale(0.6) brightness(0.9); }
+#b-chest #v-chesttime { font-size: 14px; }
+#b-chest.ready { background: linear-gradient(#FFD23F, #F2A900); color: var(--ink); animation: chestready 0.9s ease-in-out infinite; }
+#b-chest.ready .ico { filter: none; }
+@keyframes chestready { 0%, 100% { transform: translateY(0) rotate(0); } 25% { transform: translateY(-5px) rotate(-6deg); } 75% { transform: translateY(-5px) rotate(6deg); } }

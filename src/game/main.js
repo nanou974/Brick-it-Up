@@ -37,7 +37,7 @@ sfx.loadMusic('assets/music/theme.ogg');
 
 // Icônes fixes
 $('i-coin').innerHTML = COIN; $('i-star').innerHTML = STAR; $('i-gear').innerHTML = GEAR; $('i-starbig').innerHTML = STAR;
-$('i-chest').innerHTML = CHEST; $('i-coin2').innerHTML = COIN; $('i-star2').innerHTML = STAR;
+$('i-chest').innerHTML = CHEST; $('i-coin2').innerHTML = COIN; $('i-star2').innerHTML = STAR; $('i-chestbtn').innerHTML = CHEST;
 $('v-version').textContent = $('v-version2').textContent = `v${VERSION}`;
 
 // ---------- Chantier ----------
@@ -232,26 +232,34 @@ function finishHouse() {
 }
 $('b-next').addEventListener('click', () => { sfx.unlock(); game.nextLevel(); show('p-done', false); setupSite(); banner(`MAISON ${game.s.level} !`); save(); });
 
-// ---------- Absence ----------
-// Absence : le chantier a continué et le coffre s'est rempli ; on récupère les pièces à l'ouverture
-function fmtAway(sec) { const h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60); return h ? `${h} h ${String(m).padStart(2, '0')}` : `${m} min`; }
+// ---------- Coffre du chantier ----------
+// Un coffre toutes les 20 minutes (en temps réel). Son contenu est tiré à l'ouverture.
+let chestRoll = 0;
+const mmss = (sec) => `${Math.floor(sec / 60)}:${String(Math.floor(sec % 60)).padStart(2, '0')}`;
+function refreshChest() {
+  const ready = game.chestReady(), b = $('b-chest');
+  b.classList.toggle('ready', ready);
+  const t = ready ? 'OUVRIR !' : mmss(game.chestLeft());
+  if ($('v-chesttime').textContent !== t) $('v-chesttime').textContent = t;
+}
+$('b-chest').addEventListener('click', () => {
+  sfx.unlock();
+  if (!game.chestReady()) { sfx.denied(); banner(`COFFRE DANS ${mmss(game.chestLeft())}`); return; }
+  chestRoll = game.rollChest();
+  $('v-chest').textContent = fmt(chestRoll);
+  $('v-awaytxt').textContent = `Un nouveau coffre sera prêt dans ${game.p.chestMinutes} minutes.`;
+  sfx.tier(); show('p-away', true);
+});
 function catchUp() {
-  const r = game.catchUp();
-  if (game.s.chest > 0) {
-    $('v-chest').textContent = fmt(game.s.chest);
-    const parts = [`Absent pendant ${fmtAway(r.away)}.`];
-    if (r.placed > 0) parts.push(`Ton équipe a posé ${r.placed} élément${r.placed > 1 ? 's' : ''}.`);
-    if (r.base > 0) parts.push(`Le chantier a rapporté ${fmt(r.base)} pièces (${Math.round(game.p.offlineRate * 100)} % de ton revenu en jeu).`);
-    $('v-awaytxt').textContent = parts.join(' ');
-    show('p-away', true);
-  }
+  game.catchUp();
   setupSite();
   if (game.done) finishHouse();
 }
 $('b-away').addEventListener('click', () => {
   sfx.unlock();
   const from = $('i-chest').getBoundingClientRect(), to = $('pill-credits').getBoundingClientRect();
-  const got = game.collectChest(); show('p-away', false); save();
+  const got = game.collectChest(chestRoll); chestRoll = 0; show('p-away', false); save();
+  if (!got) return;
   // Les pièces s'envolent du coffre vers le compteur
   for (let k = 0; k < 12; k++) {
     const c = document.createElement('span'); c.className = 'flycoin'; c.innerHTML = COIN;
@@ -314,7 +322,8 @@ $('shop-looks').addEventListener('click', (e) => {
   owned ? sfx.buy() : sfx.tier();
   applySkins(); renderShop(); refresh(true); save();
 });
-document.addEventListener('visibilitychange', () => { if (document.hidden) { save(); sfx.pause(true); } else { sfx.pause(false); catchUp(); } });
+// Appli en arrière-plan : on sauvegarde et on coupe le son ; au retour, le chantier reprend là où il s'était arrêté
+document.addEventListener('visibilitychange', () => { if (document.hidden) { save(); sfx.pause(true); } else { sfx.pause(false); game.catchUp(); last = performance.now(); } });
 addEventListener('pagehide', save);
 
 // ---------- Menu ----------
@@ -348,12 +357,11 @@ function frame(now) {
   const dt = Math.min(0.1, (now - last) / 1000); last = now;
   game.update(dt);
   workersWork();
-  game.trackRate(dt);
   updateHold(dt);
   site.update(dt, game);
   truckSounds(dt);
   ring();
-  uiT -= dt; if (uiT <= 0) { uiT = 0.1; refresh(); }
+  uiT -= dt; if (uiT <= 0) { uiT = 0.1; refresh(); refreshChest(); }
   saveT += dt; if (saveT > 5) { saveT = 0; save(); }
   requestAnimationFrame(frame);
 }
