@@ -110,7 +110,13 @@ export class Site {
   // Glisser horizontalement pour tourner autour du chantier
   setupDrag(canvas) {
     canvas.addEventListener('pointerdown', e => { this.drag = { x: e.clientX, o: this.orbitTarget }; });
-    addEventListener('pointermove', e => { if (this.drag) this.orbitTarget = this.drag.o - (e.clientX - this.drag.x) * 0.008; });
+    addEventListener('pointermove', e => {
+      if (!this.drag) return;
+      const dx = e.clientX - this.drag.x;
+      // Dès qu'on a tourné la vue soi-même (glissé de plus de 6 px), le balancement automatique s'arrête pour de bon
+      if (Math.abs(dx) > 6) this.userOrbit = true;
+      this.orbitTarget = this.drag.o - dx * 0.008;
+    });
     addEventListener('pointerup', () => { this.drag = null; });
   }
 
@@ -336,7 +342,8 @@ export class Site {
       this.truck.rotation.z = this.truckKick * 0.06;
     }
     // Caméra : tourne doucement autour du chantier, monte avec la construction
-    if (!this.drag) this.orbitTarget += (Math.sin(this.time * 0.12) * 0.35 - this.orbitTarget) * dt * 0.05;
+    // Léger balancement automatique de la caméra, seulement tant qu'on n'a jamais tourné la vue à la main
+    if (!this.drag && !this.userOrbit) this.orbitTarget += (Math.sin(this.time * 0.12) * 0.35 - this.orbitTarget) * dt * 0.05;
     this.orbit += (this.orbitTarget - this.orbit) * Math.min(1, dt * 6);
     const done = game.items.length ? game.s.placed / game.items.length : 0;
     const ty = 0.8 + this.plan.ridgeY * 0.45 * done, D = this.camDist;

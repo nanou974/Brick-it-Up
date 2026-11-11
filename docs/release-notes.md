@@ -1,5 +1,5 @@
-## Brick'it Up v0.5.2
+## Brick'it Up v0.5.3
 
 Télécharge l'APK ci-dessous et ouvre-le : il s'installe par-dessus la version précédente, ta partie est conservée.
 
-- **Les ouvriers travaillent vraiment** : chacun marche jusqu'à la palette, prend l'élément (parpaing, brique, poutre, tuile…), le porte jusqu'à la maison et le dépose ; l'élément tombe à sa place à son arrivée, puis l'ouvrier retourne à son poste. Plus la cadence est élevée, plus ils se dépêchent.
+- **La vue reste où tu la laisses** : quand on fait tourner l'écran, il ne continue plus de tourner doucement après. Le petit balancement automatique de la caméra ne dure que tant qu'on n'a jamais tourné la vue soi-même (une simple tape sur le chantier ne compte pas).
