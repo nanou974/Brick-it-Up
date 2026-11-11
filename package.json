@@ -1,6 +1,6 @@
 {
   "name": "brick-it-up",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "private": true,
   "description": "Brick'it Up – jeu mobile 3D incrémental : pose les éléments livrés, améliore ton chantier, construis des maisons de plus en plus grandes.",
   "type": "module",

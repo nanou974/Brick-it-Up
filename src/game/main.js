@@ -53,14 +53,15 @@ function setupSite() {
 }
 
 game.on('place', (it, gain, byWorker, index) => {
-  site.addItem(index, true);
   site.updateGhost(game);
   site.setStock(game.s.stock, game.p.cap);
-  // Poses très rapprochées (doigt maintenu, équipe nombreuse) : bruit raccourci pour ne pas saturer
-  const nowP = performance.now(); sfx.place(it.stage, nowP - lastPlaceAt < 160); lastPlaceAt = nowP;
-  if (byWorker) { site.workerHop(); floatGain(`+${fmt(gain)}`, true); } else floatGain(`+${fmt(gain)}`);
+  // Bruit de pose (raccourci quand les poses sont très rapprochées) et gain qui s'envole
+  const landed = (small) => { const nowP = performance.now(); sfx.place(it.stage, nowP - lastPlaceAt < 160); lastPlaceAt = nowP; floatGain(`+${fmt(gain)}`, small); };
+  // Pose par un ouvrier : il va chercher l'élément sur la palette et le porte jusqu'à la maison
+  if (byWorker) site.workerJob(index, () => landed(true), game.p.workerTime * 0.85);
+  else { site.addItem(index, true); landed(false); }
   if (game.stage !== lastStage && !game.done) { lastStage = game.stage; banner(`${STAGES[game.stage].name.toUpperCase()} !`); }
-  if (game.done) { setTimeout(finishHouse, 900); }
+  if (game.done) { setTimeout(finishWhenReady, 900); }
   dirtyCards = true;
 });
 let lastPlaceAt = 0, braked = false;
@@ -217,6 +218,8 @@ function ring() {
 }
 
 // ---------- Fin de maison ----------
+// On attend que les ouvriers aient déposé leurs derniers éléments
+function finishWhenReady() { if (site.busy()) setTimeout(finishWhenReady, 300); else finishHouse(); }
 function finishHouse() {
   if (!game.done) return;
   sfx.win(); banner('MAISON TERMINÉE !');

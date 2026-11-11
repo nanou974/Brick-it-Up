@@ -1,5 +1,5 @@
-## Brick'it Up v0.5.1
+## Brick'it Up v0.5.2
 
 Télécharge l'APK ci-dessous et ouvre-le : il s'installe par-dessus la version précédente, ta partie est conservée.
 
-- Une petite **pièce** s'affiche à côté du gain sous le bouton de pose (« Touche pour poser · +3 🪙 ») et sur les gains qui s'envolent à chaque pose : on voit tout de suite que ce sont des pièces qu'on gagne.
+- **Les ouvriers travaillent vraiment** : chacun marche jusqu'à la palette, prend l'élément (parpaing, brique, poutre, tuile…), le porte jusqu'à la maison et le dépose ; l'élément tombe à sa place à son arrivée, puis l'ouvrier retourne à son poste. Plus la cadence est élevée, plus ils se dépêchent.

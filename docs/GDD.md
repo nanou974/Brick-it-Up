@@ -6,7 +6,7 @@
 - Quand l'entrepôt est plein, le camion attend : il faut poser pour qu'il revienne.
 - **Tapoter le chantier** accélère la livraison : 0,1 s par tape, au plus 60 % de l'intervalle par livraison. Le camion approche sur la route au rythme du minuteur.
 - **Musique** : morceau original en Do majeur, 116 BPM, 32 mesures en boucle, calculé par `tools/music-render.mjs` (assets/music/theme.ogg).
-- Les **ouvriers** posent tout seuls ce qui est en stock, même quand le jeu est fermé (jusqu'à 8 h d'absence rattrapées).
+- Les **ouvriers** font l'aller-retour : ils marchent jusqu'à la palette, prennent l'élément (porté devant eux, à la couleur du matériau), le portent jusqu'à sa place sur la maison, où il tombe à leur arrivée, puis retournent à leur poste. Ils vont plus vite quand leur cadence augmente. Ils posent tout seuls ce qui est en stock, même quand le jeu est fermé (jusqu'à 8 h d'absence rattrapées).
 
 ## Étapes d'une maison
 | Étape | Élément | Crédits au niveau 1 |

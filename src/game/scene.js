@@ -51,15 +51,19 @@ export function makeTruck(tier, skin = { model: 'plateau', color: 0xF2A900 }) {
   return shadows(g);
 }
 
-// Ouvrier : tenue choisie dans la boutique (gilet et casque)
+// Ouvrier : tenue choisie dans la boutique (gilet et casque). Jambes et bras articulés pour marcher et porter.
 function makeWorker(i, outfit = { vest: 0xFF8A1F, hat: 0xFFD23F }) {
   const g = new THREE.Group();
-  const vest = mat(`gilet-${outfit.vest}`, outfit.vest), skin = mat(`peau${i % 3}`, [0xF1C7A3, 0xC68E62, 0x8D5A3B][i % 3]);
-  const legs = box(0.32, 0.45, 0.2, mat('jean', 0x2F4C7A)); legs.position.y = 0.23; g.add(legs);
+  const vest = mat(`gilet-${outfit.vest}`, outfit.vest), skin = mat(`peau${i % 3}`, [0xF1C7A3, 0xC68E62, 0x8D5A3B][i % 3]), jean = mat('jean', 0x2F4C7A);
+  const limb = (w, h, m, x, y) => { const piv = new THREE.Group(); piv.position.set(x, y, 0); const b = box(w, h, w, m); b.position.y = -h / 2; piv.add(b); g.add(piv); return piv; };
+  const legL = limb(0.14, 0.45, jean, -0.09, 0.45), legR = limb(0.14, 0.45, jean, 0.09, 0.45);
   const body = box(0.4, 0.45, 0.26, vest); body.position.y = 0.68; g.add(body);
   const head = new THREE.Mesh(new THREE.SphereGeometry(0.15, 10, 8), skin); head.position.y = 1.05; g.add(head);
   const hat = new THREE.Mesh(new THREE.SphereGeometry(0.17, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), mat(`casque-${outfit.hat}`, outfit.hat)); hat.position.y = 1.1; g.add(hat);
-  const arm = box(0.1, 0.4, 0.1, vest); arm.position.set(0.26, 0.7, 0); g.add(arm); g.userData.arm = arm;
+  const armR = limb(0.1, 0.4, vest, 0.26, 0.88), armL = limb(0.1, 0.4, vest, -0.26, 0.88);
+  // Élément porté (caché tant que l'ouvrier ne porte rien)
+  const carry = box(0.42, 0.24, 0.3, mat('porte', 0x9AA0A6)); carry.position.set(0, 0.95, 0.32); carry.visible = false; g.add(carry);
+  Object.assign(g.userData, { legL, legR, armL, armR, arm: armR, carry, body });
   return shadows(g);
 }
 
@@ -114,7 +118,9 @@ export class Site {
   setHouse(game) {
     const { plan, house } = game;
     this.plan = plan; this.house = house; this.items = plan.items;
-    for (const m of this.meshes) this.houseGroup.remove(m);
+    for (const w of this.workers) { w.userData.job = null; this.workerGroup.remove(w); }
+    this.workers = [];
+    for (const m of this.meshes) if (m) this.houseGroup.remove(m);
     this.meshes = []; this.falling = [];
     if (this.plotMesh) this.scene.remove(this.plotMesh);
     const P = plan.plot;
@@ -133,6 +139,7 @@ export class Site {
   }
 
   addItem(index, animate) {
+    if (this.meshes[index]) return this.meshes[index];
     const it = this.items[index], m = shadows(makeItem(it));
     m.position.set(it.x, it.y, it.z);
     this.houseGroup.add(m); this.meshes[index] = m;
@@ -179,15 +186,73 @@ export class Site {
   // Ouvriers visibles autour du chantier (8 au maximum)
   setWorkers(n) {
     const want = Math.min(8, n);
+    // Un ouvrier qui avait un aller-retour en cours le termine tout de suite (élément posé)
+    while (this.workers.length > want) { const w = this.workers.pop(); this.finishJob(w); this.workerGroup.remove(w); }
     while (this.workers.length < want) {
       const i = this.workers.length, w = makeWorker(i, this.skin.worker), P = this.plan.plot;
       const a = Math.PI * 0.08 + i * 0.75, r = Math.max(this.plan.w, this.plan.d) * 0.5 + 1.3;
       w.position.set(Math.cos(a) * r * 1.1, 0, Math.sin(a) * r * 0.75 + 0.6); w.lookAt(0, 0, 0);
-      w.userData.hop = 0; this.workerGroup.add(w); this.workers.push(w);
+      Object.assign(w.userData, { hop: 0, home: w.position.clone(), path: [], job: null, pause: 0, phase: i });
+      this.workerGroup.add(w); this.workers.push(w);
     }
-    while (this.workers.length > want) this.workerGroup.remove(this.workers.pop());
   }
   workerHop() { if (this.workers.length) { const w = this.workers[Math.floor(Math.random() * this.workers.length)]; w.userData.hop = 1; } }
+
+  // ---------- Aller-retour d'un ouvrier : palette → élément → retour à son poste ----------
+  // L'élément n'apparaît sur la maison qu'à l'arrivée de l'ouvrier ; onDone (bruit, gain) est appelé à ce moment-là.
+  // Sans ouvrier libre (ils sont tous en route), l'élément est posé directement.
+  workerJob(index, onDone, tripTime) {
+    const w = this.workers.find(x => !x.userData.job);
+    const it = this.items[index];
+    if (!w || !it) { this.addItem(index, true); onDone(); return; }
+    const pal = this.palletPos.clone().add(new THREE.Vector3(0.3, 0, 1.0));
+    let dx = it.x, dz = it.z; const len = Math.hypot(dx, dz) || 1; dx /= len; dz /= len;
+    const drop = new THREE.Vector3(it.x + dx * 0.9, 0, it.z + dz * 0.9);
+    const u = w.userData, dist = w.position.distanceTo(pal) + pal.distanceTo(drop);
+    u.job = { index, onDone, color: it.color || [0x9AA0A6, 0xC8553D, 0xA4703F, 0xB5512F, 0xF7F7F2, 0x62B04B][it.stage] };
+    u.speed = Math.max(2.4, dist / Math.max(0.6, tripTime - 0.3));
+    u.path = [{ p: pal, act: 'take' }, { p: drop, act: 'drop' }, { p: u.home.clone(), act: 'home' }];
+    u.pause = 0;
+  }
+  finishJob(w) {
+    const u = w.userData; if (!u.job) return;
+    const j = u.job; u.job = null; u.carry.visible = false; u.path = [];
+    if (!this.meshes[j.index] && this.items[j.index]) this.addItem(j.index, true);
+    j.onDone();
+  }
+  busy() { return this.workers.some(w => w.userData.job); }
+  updateWorkers(dt) {
+    for (const w of this.workers) {
+      const u = w.userData;
+      u.hop = Math.max(0, u.hop - dt * 3);
+      if (u.pause > 0) { u.pause -= dt; continue; }
+      const step = u.path[0];
+      if (!step) {
+        // À son poste : il tape avec son marteau
+        w.position.y = Math.sin(u.hop * Math.PI) * 0.35;
+        u.armR.rotation.x = -0.4 + Math.sin(this.time * 9 + u.phase) * 0.6; u.armL.rotation.x = 0; u.legL.rotation.x = u.legR.rotation.x = 0;
+        continue;
+      }
+      // Marche vers l'étape suivante
+      const to = step.p, d = Math.hypot(to.x - w.position.x, to.z - w.position.z), sp = step.act === 'home' ? Math.min(u.speed, 3.2) : u.speed;
+      if (d > 0.05) {
+        const k = Math.min(1, (sp * dt) / d);
+        w.position.x += (to.x - w.position.x) * k; w.position.z += (to.z - w.position.z) * k;
+        w.rotation.y = Math.atan2(to.x - w.position.x, to.z - w.position.z) || w.rotation.y;
+        u.phase += dt * sp * 4.2;
+        const sw = Math.sin(u.phase) * 0.7;
+        u.legL.rotation.x = sw; u.legR.rotation.x = -sw;
+        w.position.y = Math.abs(Math.sin(u.phase)) * 0.06;
+        if (u.carry.visible) { u.armL.rotation.x = u.armR.rotation.x = -1.2; } else { u.armL.rotation.x = -sw * 0.8; u.armR.rotation.x = sw * 0.8; }
+        continue;
+      }
+      // Arrivé : prend l'élément à la palette, le dépose sur la maison, ou retourne à son poste
+      u.path.shift(); u.legL.rotation.x = u.legR.rotation.x = 0; w.position.y = 0;
+      if (step.act === 'take') { u.carry.material = mat(`porte-${u.job.color}`, u.job.color); u.carry.visible = true; u.pause = 0.15; }
+      else if (step.act === 'drop') { u.pause = 0.1; u.hop = 1; const j = u.job; u.job = null; u.carry.visible = false; if (!this.meshes[j.index] && this.items[j.index]) this.addItem(j.index, true); j.onDone(); }
+      else w.lookAt(0, 0, 0);
+    }
+  }
 
   // Palette près de la route : montre le stock en attente
   setStock(n, cap) {
@@ -243,11 +308,7 @@ export class Site {
     }
     if (this.ghost) { const s = 1.02 + Math.sin(this.time * 5) * 0.015; this.ghost.scale.setScalar(s); }
     // Ouvriers : petits sauts quand ils posent, bras qui tapent
-    for (const w of this.workers) {
-      w.userData.hop = Math.max(0, w.userData.hop - dt * 3);
-      w.position.y = Math.sin(w.userData.hop * Math.PI) * 0.35;
-      w.userData.arm.rotation.x = Math.sin(this.time * 9 + w.id) * 0.6;
-    }
+    this.updateWorkers(dt);
     // Camion
     if (this.truck) {
       const tz = this.roadZ, stopX = this.palletPos.x + 1.6;
