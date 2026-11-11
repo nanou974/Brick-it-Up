@@ -16,12 +16,14 @@ Les étapes de chaque maison : fondations (parpaings), murs (briques), charpente
 
 ## Structure
 - `src/game/rules.js` : étapes, maisons, améliorations, prix (sans dépendance)
-- `src/game/house.js` : génère la liste des éléments d'une maison (positions, tailles)
+- `src/game/houses.js` : catalogue des 20 maisons et variantes des tours suivants
+- `src/game/house.js` : génère la liste des éléments d'une maison (volumes, toits, ouvertures, finitions)
+- `src/game/items3d.js` : dessin 3D de chaque élément
 - `src/game/game.js` : moteur (livraisons, pose, ouvriers, achats, absence)
 - `src/game/scene.js` : scène 3D (chantier, camion, palette, ouvriers)
 - `src/game/main.js` : interface, sauvegarde, boucle de jeu
 - `tools/sim.mjs` : simulation d'un joueur pour régler la durée des maisons
-- `tools/shot.mjs`, `tools/play.mjs` : captures et partie automatique dans le navigateur
+- `tools/shot.mjs`, `tools/play.mjs`, `tools/houses-shot.mjs` : captures, partie automatique, photo de chaque maison
 - `docs/GDD.md` : règles détaillées
 
 ## Publier une version

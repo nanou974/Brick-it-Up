@@ -215,7 +215,7 @@ function ring() {
 function finishHouse() {
   if (!game.done) return;
   sfx.win(); banner('MAISON TERMINÉE !');
-  $('v-donetxt').textContent = `${game.house.name} terminé${/maison|villa|petite/i.test(game.house.name) ? 'e' : ''} ! Tu gagnes une étoile.`;
+  $('v-donetxt').textContent = `${game.house.name} terminé${game.house.fem ? 'e' : ''} ! Tu gagnes une étoile.`;
   $('v-donebonus').textContent = `Tes étoiles sont conservées : chacune donne +5 % de crédits pour toujours. Sur la prochaine maison, plus grande et plus rentable, tu repars de zéro : crédits et améliorations.`;
   setTimeout(() => show('p-done', true), 1400);
 }

@@ -1,122 +1,17 @@
 // Scène 3D de Brick'it Up : terrain, maison qui se construit, camion de livraison, palette, ouvriers.
 import * as THREE from 'three';
+import { makeItem } from './items3d.js';
 
 const rnd = (a) => { const x = Math.sin(a * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
 
-// ---------- Matériaux partagés ----------
+// ---------- Matériaux partagés (décor, camion, ouvriers) ----------
 const M = {};
 function mat(key, color, opt = {}) {
   if (!M[key]) M[key] = new THREE.MeshStandardMaterial({ color, roughness: 0.85, metalness: 0, flatShading: true, ...opt });
   return M[key];
 }
 const box = (w, h, d, m) => new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m);
-const shade = (hex, k) => { const c = new THREE.Color(hex); c.offsetHSL(0, 0, k); return c; };
 function shadows(o, cast = true, receive = true) { o.traverse(c => { if (c.isMesh) { c.castShadow = cast; c.receiveShadow = receive; } }); return o; }
-
-// ---------- Fabrication d'un élément de la maison ----------
-export function makeItem(it, house) {
-  const g = new THREE.Group();
-  switch (it.kind) {
-    case 'parpaing': {
-      g.add(box(it.sx, it.sy, it.sz, mat('parpaing', 0x9AA0A6)));
-      for (const s of [-1, 1]) { const h = box(it.sx * 0.28, 0.02, it.sz * 0.45, mat('trou', 0x4A4F55)); h.position.set(s * it.sx * 0.22, it.sy / 2 + 0.001, 0); g.add(h); }
-      break;
-    }
-    case 'dalle': g.add(box(it.sx, it.sy, it.sz, mat('dalle', 0xB9BDC1))); break;
-    case 'brique': {
-      const key = `brique-${house.wall}-${it.tint}`;
-      if (!M[key]) M[key] = new THREE.MeshStandardMaterial({ color: shade(house.wall, [-0.03, 0, 0.03][it.tint]), roughness: 0.9, flatShading: true });
-      g.add(box(it.sx, it.sy, it.sz, M[key]));
-      break;
-    }
-    case 'pignon': {
-      const sh = new THREE.Shape(); sh.moveTo(-it.half, 0); sh.lineTo(it.half, 0); sh.lineTo(0, it.rise); sh.closePath();
-      const geo = new THREE.ExtrudeGeometry(sh, { depth: it.sz, bevelEnabled: false }); geo.translate(0, 0, -it.sz / 2);
-      const m = new THREE.Mesh(geo, mat(`pignon-${house.wall}`, shade(house.wall, -0.02))); m.rotation.y = Math.PI / 2; g.add(m);
-      break;
-    }
-    case 'ferme': {
-      const wood = mat('bois', 0xA4703F), len = Math.hypot(it.half, it.rise);
-      for (const s of [1, -1]) {
-        const b = box(0.14, 0.16, len, wood);
-        b.position.set(0, -it.drop + it.rise / 2, s * it.half / 2);
-        b.rotation.x = s * Math.atan2(it.rise, it.half); g.add(b);
-      }
-      const tie = box(0.12, 0.14, it.half * 1.6, wood); tie.position.y = 0.05; g.add(tie);
-      const king = box(0.1, it.rise * 0.8, 0.1, wood); king.position.y = it.rise * 0.4 - it.drop * 0.5; g.add(king);
-      break;
-    }
-    case 'tuile': {
-      const key = `tuile-${house.roof}-${it.row % 2}`;
-      if (!M[key]) M[key] = new THREE.MeshStandardMaterial({ color: shade(house.roof, it.row % 2 ? 0.035 : 0), roughness: 0.75, flatShading: true });
-      const t = box(it.sx, it.sy, it.sz, M[key]); g.add(t);
-      const lip = box(it.sx, 0.06, 0.08, M[key]); lip.position.set(0, -0.06, it.sz / 2 * Math.sign(it.rx || 1)); g.add(lip);
-      g.rotation.x = it.rx;
-      break;
-    }
-    case 'fenetre': case 'porte': {
-      const frame = mat('cadre', 0xF7F7F2), fw = it.sx, fh = it.sy, t = 0.08;
-      const inner = new THREE.Group(); g.add(inner);
-      if (it.kind === 'porte') {
-        const door = box(fw * 0.86, fh * 0.94, 0.08, mat('porte', 0x7A4A2B)); door.position.set(0, -fh * 0.03, it.sz / 2 - 0.02); inner.add(door);
-        const knob = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 6), mat('poignee', 0xE8C14A, { metalness: 0.6, roughness: 0.3 })); knob.position.set(fw * 0.3, -fh * 0.05, it.sz / 2 + 0.04); inner.add(knob);
-        for (const y of [0.25, -0.2]) { const p = box(fw * 0.6, fh * 0.28, 0.03, mat('porte2', 0x6A3E22)); p.position.set(0, y * fh, it.sz / 2 + 0.03); inner.add(p); }
-      } else {
-        const glass = box(fw * 0.8, fh * 0.8, 0.04, mat('vitre', 0x8FD3F4, { roughness: 0.15, metalness: 0.1, emissive: 0x1C4C6A, emissiveIntensity: 0.25 })); glass.position.z = it.sz / 2 - 0.05; inner.add(glass);
-        const bar = box(0.05, fh * 0.8, 0.05, frame); bar.position.z = it.sz / 2 - 0.02; inner.add(bar);
-        const sill = box(fw * 1.05, 0.06, 0.18, frame); sill.position.set(0, -fh / 2 - 0.03, it.sz / 2 + 0.03); inner.add(sill);
-        for (const s of [-1, 1]) { const sh = box(fw * 0.4, fh * 0.95, 0.04, mat(`volet-${house.roof}`, shade(house.roof, 0.12))); sh.position.set(s * (fw / 2 + fw * 0.2), 0, it.sz / 2 + 0.03); inner.add(sh); }
-      }
-      for (const [w, h, x, y] of [[fw, t, 0, fh / 2 - t / 2], [fw, t, 0, -fh / 2 + t / 2], [t, fh, -fw / 2 + t / 2, 0], [t, fh, fw / 2 - t / 2, 0]]) {
-        const b = box(w, h, it.sz, frame); b.position.set(x, y, 0); inner.add(b);
-      }
-      // L'élément est orienté vers l'extérieur du mur
-      const [ox, oz] = it.out; g.rotation.y = Math.atan2(ox, oz);
-      return g;
-    }
-    case 'cheminee': {
-      const b = box(0.6, 1.6, 0.6, mat('chem', 0x8C5A44)); b.position.y = 0.8; g.add(b);
-      const cap = box(0.75, 0.12, 0.75, mat('chemcap', 0x5B5B5B)); cap.position.y = 1.62; g.add(cap);
-      return g;
-    }
-    case 'dallage': { const s = box(0.8, 0.06, 0.6, mat('dallage', 0xCFC6B6)); g.add(s); return g; }
-    case 'massif': {
-      const leaf = mat('feuille', 0x4E9A3E), leaf2 = mat('feuille2', 0x62B04B);
-      for (let k = 0; k < 3; k++) { const b = new THREE.Mesh(new THREE.IcosahedronGeometry(0.35 + rnd(it.x + k) * 0.15, 0), k % 2 ? leaf : leaf2); b.position.set((k - 1) * 0.35, 0.3, (rnd(k + it.z) - 0.5) * 0.3); g.add(b); }
-      for (let k = 0; k < 5; k++) { const f = new THREE.Mesh(new THREE.IcosahedronGeometry(0.07, 0), mat(`fleur${k % 3}`, [0xF25C78, 0xFFD23F, 0xFFFFFF][k % 3])); f.position.set((rnd(k * 3 + it.x) - 0.5) * 1, 0.55 + rnd(k) * 0.15, (rnd(k * 7 + it.z) - 0.5) * 0.5); g.add(f); }
-      return g;
-    }
-    case 'boite': {
-      const p = box(0.08, 0.9, 0.08, mat('bois', 0xA4703F)); p.position.y = 0.45; g.add(p);
-      const b = box(0.3, 0.25, 0.45, mat('boite', 0x2F6FD1)); b.position.y = 1; g.add(b);
-      const f = box(0.04, 0.18, 0.06, mat('drapeau', 0xE5383B)); f.position.set(0.17, 1.12, -0.1); g.add(f);
-      return g;
-    }
-    case 'lampe': {
-      const p = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.07, 2, 8), mat('metal', 0x2E3338)); p.position.y = 1; g.add(p);
-      const l = new THREE.Mesh(new THREE.SphereGeometry(0.16, 10, 8), mat('ampoule', 0xFFF2B0, { emissive: 0xFFD36B, emissiveIntensity: 0.9 })); l.position.y = 2.1; g.add(l);
-      return g;
-    }
-    case 'piscine': {
-      const rim = box(it.pw + 0.5, 0.12, it.pd + 0.5, mat('margelle', 0xF1EDE4)); rim.position.y = 0.06; g.add(rim);
-      const w = box(it.pw, 0.13, it.pd, mat('eau', 0x3FB6E8, { roughness: 0.1, emissive: 0x0B4F7A, emissiveIntensity: 0.3 })); w.position.y = 0.07; g.add(w);
-      return g;
-    }
-    case 'tour': {
-      const t = new THREE.Mesh(new THREE.CylinderGeometry(0.75, 0.8, it.th, 10), mat(`tour-${house.wall}`, shade(house.wall, -0.04))); t.position.y = it.th / 2; g.add(t);
-      const c = new THREE.Mesh(new THREE.ConeGeometry(1.0, 1.6, 10), mat(`toit-${house.roof}`, house.roof)); c.position.y = it.th + 0.8; g.add(c);
-      return g;
-    }
-    case 'balcon': {
-      const s = box(it.bw, 0.12, 0.9, mat('dalle', 0xB9BDC1)); g.add(s);
-      for (let k = 0; k <= 6; k++) { const b = box(0.05, 0.5, 0.05, mat('metal', 0x2E3338)); b.position.set(-it.bw / 2 + k * it.bw / 6, 0.3, 0.42); g.add(b); }
-      const r = box(it.bw, 0.06, 0.06, mat('metal', 0x2E3338)); r.position.set(0, 0.56, 0.42); g.add(r);
-      return g;
-    }
-  }
-  g.rotation.y = it.ry || 0;
-  return g;
-}
 
 // ---------- Décor fixe ----------
 function tree(x, z, s) {
@@ -212,27 +107,28 @@ export class Site {
     this.meshes = []; this.falling = [];
     if (this.plotMesh) this.scene.remove(this.plotMesh);
     const P = plan.plot;
-    this.plotMesh = new THREE.Mesh(new THREE.BoxGeometry(P, 0.06, P * 0.85), mat('terre', 0xB08A5B)); this.plotMesh.position.set(0, 0.01, 0.6); this.plotMesh.receiveShadow = true; this.scene.add(this.plotMesh);
+    // Terrain : l'emprise de la maison et de ses abords, avec une marge
+    this.plotMesh = new THREE.Mesh(new THREE.BoxGeometry(plan.w + 3, 0.06, plan.d + 3), mat('terre', 0xB08A5B)); this.plotMesh.position.set(0, 0.01, 0); this.plotMesh.receiveShadow = true; this.scene.add(this.plotMesh);
     // Route derrière la maison : on voit le camion arriver au-dessus du chantier
-    this.roadZ = 0.6 - P * 0.425 - 2.4; this.road.position.set(0, 0.02, this.roadZ);
+    this.roadZ = -plan.d / 2 - 1.5 - 2.4; this.road.position.set(0, 0.02, this.roadZ);
     // Arbres autour du terrain (déterministes)
     this.decor.clear();
     for (let i = 0; i < 26; i++) {
       const a = (i / 26) * Math.PI * 2 + rnd(i) * 0.2, r = P * 0.75 + 4 + rnd(i * 3) * 10;
       const x = Math.cos(a) * r, z = Math.sin(a) * r;
-      if (Math.abs(z - this.roadZ) < 3.5 || (z > 0 && Math.abs(x) < P * 0.6)) continue;
+      if (Math.abs(z - this.roadZ) < 3.5 || (z > 0 && Math.abs(x) < P * 0.6) || (Math.abs(x) < plan.w / 2 + 2.5 && Math.abs(z) < plan.d / 2 + 2.5)) continue;
       this.decor.add(tree(x, z, 0.8 + rnd(i * 7) * 0.6));
     }
     for (let i = 0; i < game.s.placed; i++) this.addItem(i, false);
-    this.palletPos = new THREE.Vector3(-plan.w / 2 - 2.4, 0, -plan.d / 2 - 1.2);
+    this.palletPos = new THREE.Vector3(-plan.w / 2 - 0.2, 0, -plan.d / 2 - 0.6);
     this.pallet.position.copy(this.palletPos);
-    this.camDist = 12 + Math.max(plan.w, plan.d) * 1.45 + plan.wallTop * 0.9;
+    this.camDist = 9 + Math.max(plan.w, plan.d * 1.1) * 1.3 + plan.ridgeY * 0.7;
     this.sun.shadow.camera.left = this.sun.shadow.camera.bottom = -P * 0.8; this.sun.shadow.camera.right = this.sun.shadow.camera.top = P * 0.8; this.sun.shadow.camera.updateProjectionMatrix();
     this.updateGhost(game);
   }
 
   addItem(index, animate) {
-    const it = this.items[index], m = shadows(makeItem(it, this.house));
+    const it = this.items[index], m = shadows(makeItem(it));
     m.position.set(it.x, it.y, it.z);
     this.houseGroup.add(m); this.meshes[index] = m;
     if (animate) { m.position.y = it.y + 4.5; this.falling.push({ m, y: it.y, t: 0, it }); }
@@ -243,7 +139,7 @@ export class Site {
   updateGhost(game) {
     if (this.ghost) { this.houseGroup.remove(this.ghost); this.ghost = null; }
     if (game.done) return;
-    const it = this.items[game.s.placed], g = makeItem(it, this.house);
+    const it = this.items[game.s.placed], g = makeItem(it);
     const gm = mat('fantome', 0x6FD3FF, { transparent: true, opacity: 0.35, depthWrite: false, emissive: 0x2E9BD6, emissiveIntensity: 0.6 });
     g.traverse(c => { if (c.isMesh) c.material = gm; });
     g.position.set(it.x, it.y, it.z); g.scale.multiplyScalar(1.02);

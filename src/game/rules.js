@@ -12,25 +12,9 @@ export const STAGES = [
 ];
 
 // ---------- Maisons ----------
-// w × d : emprise en cases, floors : étages. Après la dernière, on reprend la liste en plus grand.
-export const HOUSES = [
-  { name: 'Cabanon', w: 4, d: 3, floors: 1, wall: 0xC8553D, roof: 0x8E3B2E },
-  { name: 'Maisonnette', w: 5, d: 4, floors: 1, wall: 0xE8D8B8, roof: 0xB5512F },
-  { name: 'Petite maison', w: 6, d: 4, floors: 1, wall: 0xF2E6CF, roof: 0x6B4A3A },
-  { name: 'Maison de campagne', w: 7, d: 5, floors: 1, wall: 0xD9C29A, roof: 0xA0452B },
-  { name: 'Maison à étage', w: 6, d: 5, floors: 2, wall: 0xEFEFEA, roof: 0x45505E },
-  { name: 'Grande maison', w: 8, d: 5, floors: 2, wall: 0xF5DEB3, roof: 0xB5512F },
-  { name: 'Villa', w: 9, d: 6, floors: 2, wall: 0xFAFAF5, roof: 0xC9663A, pool: true },
-  { name: 'Manoir', w: 10, d: 7, floors: 3, wall: 0xBFA58A, roof: 0x3E4652 },
-  { name: 'Petit immeuble', w: 8, d: 6, floors: 4, wall: 0xE6C9A8, roof: 0x5A3D33 },
-  { name: 'Château', w: 12, d: 8, floors: 3, wall: 0xB8B2A6, roof: 0x34495E, towers: true },
-];
-export function houseFor(level) {
-  const i = (level - 1) % HOUSES.length, lap = Math.floor((level - 1) / HOUSES.length);
-  const h = { ...HOUSES[i] };
-  if (lap > 0) { h.w += lap; h.d += lap; h.name += ` ${'★'.repeat(Math.min(lap, 3))}`; }
-  return h;
-}
+// Le catalogue des 20 maisons et leurs variantes est dans houses.js
+export { HOUSES, houseFor } from './houses.js';
+
 // Les gains et les prix grandissent avec le niveau (×1,7 par maison)
 export const levelMult = (level) => Math.pow(1.7, level - 1);
 // Les prix montent un peu plus vite que les gains : chaque maison demande un peu plus de temps que la précédente
