@@ -148,6 +148,25 @@ export class Sound {
   buy() { this.tone(660, 0.08, 'triangle', 0.18); this.tone(990, 0.12, 'triangle', 0.16, 0.07); }
   tier() { [523, 659, 784, 1047].forEach((f, i) => this.tone(f, 0.18, 'triangle', 0.18, i * 0.08)); this.noise(0.4, 0.2, 500); }
   win() { [523, 659, 784, 1047, 784, 1047, 1319].forEach((f, i) => this.tone(f, 0.25, 'triangle', 0.2, i * 0.11)); }
+  // Maison terminée : klaxon de fête « tut-tut-tut-tuuut », puis petite fanfare
+  victory() {
+    const c = this.ctx; if (!c || this.vol <= 0) return;
+    const horn = (f, t0, dur) => {
+      const t = c.currentTime + t0, lp = c.createBiquadFilter(), g = c.createGain();
+      lp.type = 'lowpass'; lp.frequency.value = 1800; lp.Q.value = 3;
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.09, t + 0.02); g.gain.setValueAtTime(0.09, t + dur - 0.04); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      lp.connect(g); g.connect(this.out);
+      for (const [m, d] of [[1, 0], [1.26, 4], [1, -6]]) { const o = c.createOscillator(); o.type = 'square'; o.frequency.value = f * m; o.detune.value = d; o.connect(lp); o.start(t); o.stop(t + dur + 0.05); }
+    };
+    horn(392, 0, 0.12); horn(392, 0.17, 0.12); horn(392, 0.34, 0.12); horn(523, 0.51, 0.55);
+    [784, 988, 1175, 1568].forEach((f, i) => this.tone(f, 0.3, 'triangle', 0.12, 1.15 + i * 0.09));
+  }
+  // Feux d'artifice : sifflement de la fusée qui monte, puis détonation et crépitement
+  rocket() { this.tone(500 + Math.random() * 200, 0.7, 'sine', 0.03, 0, 1600 + Math.random() * 600); }
+  burst() {
+    this.thump(60 + Math.random() * 20, 0.4, 0.4); this.fnoise(0.5, 0.3, { type: 'lowpass', f: 1200, f2: 300, attack: 0.005 });
+    for (let k = 0; k < 6; k++) this.fnoise(0.03, 0.08, { f: 3000 + Math.random() * 3000, q: 2, delay: 0.25 + Math.random() * 0.5 });
+  }
   denied() { this.tone(180, 0.12, 'square', 0.06); }
   // Tape pour accélérer : petit « tic » de klaxon, de plus en plus aigu quand on enchaîne
   rush(k) { this.rev(); this.tone(600 + k * 35, 0.03, 'triangle', 0.03); }

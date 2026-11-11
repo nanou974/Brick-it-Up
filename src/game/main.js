@@ -222,10 +222,12 @@ function ring() {
 function finishWhenReady() { if (site.busy()) setTimeout(finishWhenReady, 300); else finishHouse(); }
 function finishHouse() {
   if (!game.done) return;
-  sfx.win(); banner('MAISON TERMINÉE !');
+  // Klaxon de victoire et feux d'artifice au-dessus de la maison
+  sfx.victory(); banner('MAISON TERMINÉE !');
+  site.fireworks(3.4, () => sfx.rocket(), () => sfx.burst());
   $('v-donetxt').textContent = `${game.house.name} terminé${game.house.fem ? 'e' : ''} ! Tu gagnes une étoile.`;
   $('v-donebonus').textContent = `Dépense tes étoiles dans la boutique (bouton ★ en haut) : améliorations pour toujours, camions, tenues, décors. Sur la prochaine maison, tu repars de zéro : pièces et améliorations.`;
-  setTimeout(() => show('p-done', true), 1400);
+  setTimeout(() => show('p-done', true), 3000); // on laisse le temps d'admirer le feu d'artifice
 }
 $('b-next').addEventListener('click', () => { sfx.unlock(); game.nextLevel(); show('p-done', false); setupSite(); banner(`MAISON ${game.s.level} !`); save(); });
 

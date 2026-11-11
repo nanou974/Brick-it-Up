@@ -293,8 +293,92 @@ export class Site {
     this.truckKick = 1;
   }
 
+  // ---------- Feux d'artifice (maison terminée) ----------
+  // Des fusées partent autour de la maison et explosent en gerbes de couleur au-dessus du toit.
+  fireworks(duration = 3.2, onRocket = () => {}, onBurst = () => {}) {
+    this.fw = this.fw || []; this.fwSpawn = { left: duration, next: 0, onRocket }; this.fwBurst = onBurst;
+    this.duskT = duration + 2.5; // le ciel s'assombrit le temps du feu d'artifice
+  }
+  // Crépuscule pendant le feu d'artifice : ciel, brouillard et lumières baissent puis reviennent
+  updateDusk(dt) {
+    this.duskT = Math.max(0, (this.duskT || 0) - dt);
+    const target = this.duskT > 0 ? 1 : 0;
+    this.dusk = (this.dusk || 0) + (target - (this.dusk || 0)) * Math.min(1, dt * 1.5);
+    if (this.dusk < 0.002 && !this.duskWas) return;
+    this.duskWas = this.dusk >= 0.002;
+    const D = DECORS[this.skin.decor] || DECORS.prairie, night = new THREE.Color(0x1B2A4A), k = this.dusk;
+    this.scene.background.setHex(D.sky).lerp(night, k * 0.85); this.scene.fog.color.copy(this.scene.background);
+    this.sun.intensity = 2.2 * (1 - 0.6 * k); this.hemi.intensity = 1.1 * (1 - 0.45 * k);
+  }
+  updateFireworks(dt) {
+    this.updateDusk(dt);
+    const S = this.fwSpawn; if (!S && !(this.fw && this.fw.length)) return;
+    if (S) {
+      S.left -= dt; S.next -= dt;
+      if (S.next <= 0 && S.left > 0) {
+        S.next = 0.22 + Math.random() * 0.2;
+        const a = Math.random() * Math.PI * 2, r = 2 + Math.random() * Math.max(this.plan.w, this.plan.d) * 0.4;
+        const rocket = new THREE.Mesh(new THREE.SphereGeometry(0.12, 6, 4), new THREE.MeshBasicMaterial({ color: 0xFFF2B0 }));
+        rocket.position.set(Math.cos(a) * r, 0.5, Math.sin(a) * r * 0.6);
+        this.scene.add(rocket);
+        // Vitesse calculée pour exploser juste au-dessus du toit (bien dans le cadre)
+        const top = this.plan.ridgeY + 1.5 + Math.random() * 3, fuse = 0.7 + Math.random() * 0.2, vy = (top - 0.5 + 0.5 * 9 * fuse * fuse) / fuse;
+        this.fw.push({ type: 'rocket', m: rocket, v: new THREE.Vector3((Math.random() - 0.5) * 2, vy, (Math.random() - 0.5) * 1.5), t: 0, fuse });
+        S.onRocket();
+      }
+      if (S.left <= 0) this.fwSpawn = null;
+    }
+    const COLORS = [0xFF4D6D, 0xFFD23F, 0x4DD2FF, 0x7CFF6B, 0xC77DFF, 0xFF8A1F, 0xFFFFFF];
+    for (let i = this.fw.length - 1; i >= 0; i--) {
+      const f = this.fw[i]; f.t += dt;
+      if (f.type === 'rocket') {
+        f.v.y -= 9 * dt; f.m.position.addScaledVector(f.v, dt);
+        if (Math.random() < 0.6) this.puff(f.m.position.x, f.m.position.y - 0.2, f.m.position.z, 1, 0xFFE9A8);
+        if (f.t >= f.fuse) {
+          // Explosion : une gerbe de points lumineux qui retombent en s'éteignant
+          const n = 70, pos = new Float32Array(n * 3), vel = [];
+          for (let k = 0; k < n; k++) {
+            pos.set([f.m.position.x, f.m.position.y, f.m.position.z], k * 3);
+            const u = Math.random() * 2 - 1, th = Math.random() * Math.PI * 2, sp = 6 + Math.random() * 2, q = Math.sqrt(1 - u * u);
+            vel.push(new THREE.Vector3(q * Math.cos(th) * sp, u * sp, q * Math.sin(th) * sp));
+          }
+          const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+          const color = COLORS[Math.floor(Math.random() * COLORS.length)];
+          if (!this.glowTex) {
+            // Étincelle ronde et lumineuse (dégradé radial dessiné une fois)
+            const cv = document.createElement('canvas'); cv.width = cv.height = 64; const cx = cv.getContext('2d');
+            const gr = cx.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.35, 'rgba(255,255,255,0.9)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+            cx.fillStyle = gr; cx.fillRect(0, 0, 64, 64); this.glowTex = new THREE.CanvasTexture(cv);
+          }
+          const mat2 = new THREE.PointsMaterial({ color, size: 1.3, map: this.glowTex, transparent: true, opacity: 1, depthWrite: false });
+          // Éclair au centre de l'explosion
+          const flash = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.glowTex, color, transparent: true, depthWrite: false }));
+          flash.position.copy(f.m.position); flash.scale.setScalar(5); this.scene.add(flash);
+          this.fw.push({ type: 'flash', m: flash, t: 0 });
+          const pts = new THREE.Points(geo, mat2); this.scene.add(pts);
+          this.fw.push({ type: 'burst', m: pts, vel, t: 0 });
+          this.scene.remove(f.m); f.m.geometry.dispose(); this.fw.splice(i, 1);
+          this.fwBurst?.();
+        }
+      } else if (f.type === 'flash') {
+        f.m.material.opacity = Math.max(0, 1 - f.t / 0.3); f.m.scale.setScalar(5 + f.t * 8);
+        if (f.t > 0.3) { this.scene.remove(f.m); f.m.material.dispose(); this.fw.splice(i, 1); }
+      } else {
+        const a = f.m.geometry.attributes.position;
+        for (let k = 0; k < f.vel.length; k++) {
+          const v = f.vel[k]; v.multiplyScalar(1 - dt * 1.6); v.y -= 3.5 * dt;
+          a.array[k * 3] += v.x * dt; a.array[k * 3 + 1] += v.y * dt; a.array[k * 3 + 2] += v.z * dt;
+        }
+        a.needsUpdate = true;
+        f.m.material.opacity = Math.max(0, 1 - f.t / 1.6); f.m.material.size = 1.3 * (1 - f.t / 2.4);
+        if (f.t > 1.6) { this.scene.remove(f.m); f.m.geometry.dispose(); f.m.material.dispose(); this.fw.splice(i, 1); }
+      }
+    }
+  }
+
   update(dt, game) {
     this.time += dt;
+    this.updateFireworks(dt);
     // Éléments qui tombent à leur place, avec un petit rebond et de la poussière
     for (let i = this.falling.length - 1; i >= 0; i--) {
       const f = this.falling[i]; f.t += dt;
