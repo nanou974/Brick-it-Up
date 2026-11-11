@@ -108,17 +108,30 @@ export class Site {
   }
 
   // Glisser horizontalement pour tourner autour du chantier
+  // Glisser horizontalement pour tourner autour du chantier.
+  //  - seul le doigt qui a commencé le geste compte ; un deuxième doigt annule la rotation (évite les demi-tours) ;
+  //  - il faut glisser de plus de 15 px avant que la vue tourne (une tape ne la fait jamais bouger) ;
+  //  - pendant une série de tapes rapides (deux appuis à moins d'une demi-seconde), la rotation est bloquée.
   setupDrag(canvas) {
-    canvas.addEventListener('pointerdown', e => { this.drag = { x: e.clientX, o: this.orbitTarget }; });
-    addEventListener('pointermove', e => {
-      if (!this.drag) return;
-      const dx = e.clientX - this.drag.x;
-      // Dès qu'on a tourné la vue soi-même (glissé de plus de 6 px), le balancement automatique s'arrête pour de bon
-      if (Math.abs(dx) > 6) this.userOrbit = true;
-      this.orbitTarget = this.drag.o - dx * 0.008;
+    const DEAD = 15, RAPID = 500;
+    let lastDown = 0;
+    canvas.addEventListener('pointerdown', e => {
+      const now = performance.now(), rapid = now - lastDown < RAPID; lastDown = now;
+      if (this.drag) { this.drag.locked = true; return; }               // deuxième doigt : pas de rotation
+      this.drag = { id: e.pointerId, x: e.clientX, o: this.orbitTarget, moving: false, locked: rapid };
     });
-    addEventListener('pointerup', () => { this.drag = null; });
+    addEventListener('pointermove', e => {
+      const d = this.drag;
+      if (!d || e.pointerId !== d.id || d.locked) return;
+      let dx = e.clientX - d.x;
+      if (!d.moving) { if (Math.abs(dx) < DEAD) return; d.moving = true; d.x += Math.sign(dx) * DEAD; dx = e.clientX - d.x; }
+      this.userOrbit = true; // la vue a été tournée à la main : plus de balancement automatique
+      this.orbitTarget = d.o - dx * 0.008;
+    });
+    const end = (e) => { if (this.drag && e.pointerId === this.drag.id) this.drag = null; };
+    addEventListener('pointerup', end); addEventListener('pointercancel', end);
   }
+
 
   // Prépare le chantier d'une nouvelle maison (et repose les éléments déjà posés)
   setHouse(game) {
