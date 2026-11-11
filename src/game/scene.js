@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { makeItem } from './items3d.js';
 import { DECORS, buildDecor } from './decor.js';
 
+const ZOOM_MIN = 0.55, ZOOM_MAX = 2.2; // 0,55 = tout près, 2,2 = vue d'ensemble
 const rnd = (a) => { const x = Math.sin(a * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
 
 // ---------- Matériaux partagés (décor, camion, ouvriers) ----------
@@ -115,12 +116,25 @@ export class Site {
   setupDrag(canvas) {
     const DEAD = 15, RAPID = 500;
     let lastDown = 0;
+    // Zoom : pincement à deux doigts (écarter = zoomer, rapprocher = dézoomer) ou molette de la souris
+    this.zoom = 1; this.zoomTarget = 1; this.pts = new Map(); this.pinch = null;
+    const pinchDist = () => { const [a, b] = [...this.pts.values()]; return Math.hypot(a.x - b.x, a.y - b.y); };
     canvas.addEventListener('pointerdown', e => {
       const now = performance.now(), rapid = now - lastDown < RAPID; lastDown = now;
+      this.pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (this.pts.size === 2) this.pinch = { d0: pinchDist(), z0: this.zoomTarget, active: false };
       if (this.drag) { this.drag.locked = true; return; }               // deuxième doigt : pas de rotation
       this.drag = { id: e.pointerId, x: e.clientX, o: this.orbitTarget, moving: false, locked: rapid };
     });
     addEventListener('pointermove', e => {
+      if (this.pts.has(e.pointerId)) this.pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (this.pinch && this.pts.size === 2) {
+        // On attend un vrai écartement (20 px) pour ne pas zoomer pendant des tapes rapides à deux pouces
+        const d = pinchDist();
+        if (!this.pinch.active && Math.abs(d - this.pinch.d0) > 20) { this.pinch.active = true; this.pinch.d0 = d; this.pinch.z0 = this.zoomTarget; }
+        if (this.pinch.active) this.zoomTarget = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, this.pinch.z0 * this.pinch.d0 / Math.max(10, d)));
+        return;
+      }
       const d = this.drag;
       if (!d || e.pointerId !== d.id || d.locked) return;
       let dx = e.clientX - d.x;
@@ -128,9 +142,14 @@ export class Site {
       this.userOrbit = true; // la vue a été tournée à la main : plus de balancement automatique
       this.orbitTarget = d.o - dx * 0.008;
     });
-    const end = (e) => { if (this.drag && e.pointerId === this.drag.id) this.drag = null; };
+    const end = (e) => {
+      this.pts.delete(e.pointerId); if (this.pts.size < 2) this.pinch = null;
+      if (this.drag && e.pointerId === this.drag.id) this.drag = null;
+    };
     addEventListener('pointerup', end); addEventListener('pointercancel', end);
+    canvas.addEventListener('wheel', e => { e.preventDefault(); this.zoomTarget = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, this.zoomTarget * (1 + Math.sign(e.deltaY) * 0.1))); }, { passive: false });
   }
+
 
 
   // Prépare le chantier d'une nouvelle maison (et repose les éléments déjà posés)
@@ -496,7 +515,10 @@ export class Site {
     if (!this.drag && !this.userOrbit) this.orbitTarget += (Math.sin(this.time * 0.12) * 0.35 - this.orbitTarget) * dt * 0.05;
     this.orbit += (this.orbitTarget - this.orbit) * Math.min(1, dt * 6);
     const done = game.items.length ? game.s.placed / game.items.length : 0;
-    const ty = 0.8 + this.plan.ridgeY * 0.45 * done, D = this.camDist;
+    // Zoom lissé ; le brouillard recule avec la caméra pour que la maison reste nette en vue d'ensemble
+    this.zoom += (this.zoomTarget - this.zoom) * Math.min(1, dt * 8);
+    this.scene.fog.near = 45 * this.zoom; this.scene.fog.far = 110 * this.zoom;
+    const ty = 0.8 + this.plan.ridgeY * 0.45 * done, D = this.camDist * this.zoom;
     this.camera.position.set(Math.sin(this.orbit) * D, ty + D * 0.48, Math.cos(this.orbit) * D + 1.2);
     this.camera.lookAt(0, ty, 0.8);
     this.renderer.render(this.scene, this.camera);
