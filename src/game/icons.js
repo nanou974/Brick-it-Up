@@ -22,3 +22,6 @@ export const UP_ICONS = {
 export const COIN = svg(`<circle cx="32" cy="32" r="26" fill="#FFC531" stroke="#1B2340" stroke-width="4"/><circle cx="32" cy="32" r="16" fill="#FFDB6E"/><path d="M27 22 H37 L32 32 L37 42 H27" fill="none" stroke="#C98A00" stroke-width="4"/>`);
 export const STAR = svg(`<path d="M32 6 L39.5 23 L58 24.5 L44 37 L48.5 55 L32 45.5 L15.5 55 L20 37 L6 24.5 L24.5 23 Z" fill="#FFD23F" stroke="#1B2340" stroke-width="4" stroke-linejoin="round"/>`);
 export const GEAR = svg(`<path d="M32 20 a12 12 0 1 0 0.01 0 Z M27 4 h10 l2 8 6 3 7-4 7 7-4 7 3 6 8 2 v10 l-8 2-3 6 4 7-7 7-7-4-6 3-2 8 H27 l-2-8-6-3-7 4-7-7 4-7-3-6-8-2 V27 l8-2 3-6-4-7 7-7 7 4 6-3 Z" fill="#fff" fill-rule="evenodd"/>`);
+
+// Coffre aux pièces (écran de retour)
+export const CHEST = svg(`<g stroke="#1B2340" stroke-width="3" stroke-linejoin="round"><path d="M8 30 Q8 14 32 14 Q56 14 56 30 Z" fill="#B5652D"/><rect x="8" y="30" width="48" height="24" rx="3" fill="#C8763A"/><rect x="8" y="28" width="48" height="6" fill="#F2B635"/><rect x="28" y="30" width="8" height="10" rx="2" fill="#F2B635"/><path d="M14 54 V30 M50 54 V30" stroke="#8C4A1E"/></g><g fill="#FFD23F" stroke="#1B2340" stroke-width="2"><circle cx="22" cy="14" r="5"/><circle cx="32" cy="10" r="5"/><circle cx="42" cy="14" r="5"/></g>`);

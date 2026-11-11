@@ -49,7 +49,7 @@ des fenêtres (classiques, peu nombreuses, nombreuses, baies vitrées), des vole
 
 Ensuite, la liste recommence en plus grand (★, ★★, ★★★) avec des **variantes** : autres couleurs de murs et de toit,
 matériau échangé un tour sur deux (brique → pierre → crépi), un à trois ajouts supplémentaires (véranda, pergola, puits…).
-Gains ×1,7 par maison, prix ×1,85 par maison.
+Gains ×1,7 par maison, prix ×1,8 par maison.
 
 ## Améliorations
 Remises à zéro à chaque nouvelle maison, comme les crédits (seules les étoiles sont conservées). Palier toutes les 5 améliorations : chaque achat compte pour 0,7 et chaque palier ajoute d'un coup 1,5.
@@ -61,8 +61,26 @@ Remises à zéro à chaque nouvelle maison, comme les crédits (seules les étoi
 | Entrepôt | +2 places en attente | — |
 | Ouvriers | +1 ouvrier (pose toutes les 6 s, un peu plus vite à chaque recrue) | ouvriers visibles sur le chantier |
 
-## Étoiles
-Une étoile par maison terminée : +5 % de crédits pour toujours.
+## Étoiles et boutique
+Une étoile par maison terminée. Les étoiles sont une monnaie, dépensée dans la boutique (bouton ★ en haut de l'écran).
+
+**Améliorations permanentes** (jamais remises à zéro) :
+| Amélioration | Effet par niveau | Prix (étoiles) |
+| --- | --- | --- |
+| Équipe de départ | +1 ouvrier dès le début de chaque maison | 3, 6, 10 |
+| Gros camion | +1 élément par livraison | 4, 8 |
+| Livraison express | livraisons 10 % plus rapides | 2, 4, 6 |
+| Tapes efficaces | +0,05 s par tape (0,1 → 0,2 s) | 1, 3 |
+| Coffre agrandi | absence rattrapée 8 → 12 → 24 h, revenu hors ligne 25 → 35 → 50 % | 2, 5 |
+| Rapport de base | +10 % de pièces | 1, 2, 3, 4, 5 |
+
+**Personnalisation** : 6 camions (plateau, benne, américain ; plusieurs couleurs), 5 tenues d'ouvriers,
+5 décors (prairie, bord de mer, montagne enneigée, campagne d'automne, ville). 1 à 3 étoiles chacun.
+
+## Hors ligne
+Pendant l'absence (8 h au plus, 24 h avec le coffre agrandi) : le camion livre et les ouvriers posent,
+et le chantier rapporte en plus un revenu de base (25 % du revenu mesuré en jeu sur les 3 dernières minutes,
+jusqu'à 50 %). Tout va dans un **coffre** qu'on récupère à l'ouverture.
 
 ## Durée (simulation, joueur actif)
-Cabanon ≈ 6 min, puis de plus en plus long jusqu'au Château ≈ 19 min (environ 4 h pour les 20 maisons) ; au tour suivant (★), environ 12 min pour le cabanon.
+Cabanon ≈ 6 min, puis de plus en plus long jusqu'au Château ≈ 21 min sans boutique, ≈ 16 min en dépensant ses étoiles (3 h 30 à 4 h 15 pour les 20 maisons).

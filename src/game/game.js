@@ -1,19 +1,35 @@
-// Moteur de jeu de Brick'it Up : livraisons, pose, ouvriers, achats, fin de maison. Sans affichage.
-import { STAGES, UPGRADES, houseFor, params, itemValue, upgradeCost, tierOf, TIER_STEP } from './rules.js';
+// Moteur de jeu de Brick'it Up : livraisons, pose, ouvriers, achats, fin de maison, boutique d'étoiles,
+// revenu hors ligne. Sans affichage.
+import { STAGES, UPGRADES, PERKS, COSMETICS, houseFor, params, itemValue, upgradeCost, perkCost, tierOf, TIER_STEP } from './rules.js';
 import { buildHouse, stageCounts } from './house.js';
 
-export const OFFLINE_MAX = 8 * 3600; // on rattrape au plus 8 h d'absence
-export const RUSH_TAP = 0.1, RUSH_MAX = 0.6; // tape sur l'écran : 0,1 s gagnée, 60 % de l'intervalle au plus
+export const RUSH_MAX = 0.6; // tapes sur l'écran : au plus 60 % de l'intervalle par livraison
+const RATE_TAU = 180;        // le revenu de jeu est mesuré sur environ 3 minutes
 
 export function freshState() {
-  return { v: 1, level: 1, stars: 0, credits: 0, placed: 0, stock: 0, deliveryT: 0, workerT: 0, up: Object.fromEntries(UPGRADES.map(u => [u.key, 0])), total: 0, lastSeen: Date.now() };
+  return {
+    v: 2, level: 1, stars: 0, starsTotal: 0, credits: 0, placed: 0, stock: 0, deliveryT: 0, workerT: 0, rushT: 0,
+    up: Object.fromEntries(UPGRADES.map(u => [u.key, 0])),
+    perks: Object.fromEntries(PERKS.map(p => [p.key, 0])),
+    owned: { truck: ['jaune'], worker: ['orange'], decor: ['prairie'] },
+    equip: { truck: 'jaune', worker: 'orange', decor: 'prairie' },
+    rate: 0,      // pièces gagnées par seconde de jeu (moyenne glissante), base du revenu hors ligne
+    chest: 0,     // pièces gagnées pendant l'absence, à récupérer
+    total: 0, lastSeen: Date.now(),
+  };
 }
 
 export class Game {
   constructor(state) {
-    this.s = { ...freshState(), ...(state || {}) };
-    this.s.up = { ...freshState().up, ...(this.s.up || {}) };
+    const f = freshState();
+    this.s = { ...f, ...(state || {}) };
+    this.s.up = { ...f.up, ...(this.s.up || {}) };
+    this.s.perks = { ...f.perks, ...(this.s.perks || {}) };
+    this.s.owned = { ...f.owned, ...(this.s.owned || {}) };
+    this.s.equip = { ...f.equip, ...(this.s.equip || {}) };
+    if (this.s.v < 2) { this.s.starsTotal = this.s.stars; this.s.v = 2; } // ancienne sauvegarde : les étoiles deviennent une monnaie
     this.listeners = { place: [], deliver: [], level: [] };
+    this.earnedTick = 0;
     this.loadHouse();
   }
   on(ev, fn) { this.listeners[ev].push(fn); }
@@ -26,7 +42,7 @@ export class Game {
     this.counts = stageCounts(this.items);
     this.s.placed = Math.min(this.s.placed, this.items.length);
   }
-  get p() { return params(this.s.up, this.s.stars); }
+  get p() { return params(this.s.up, this.s.perks); }
   get remaining() { return this.items.length - this.s.placed; }
   get done() { return this.s.placed >= this.items.length; }
   get stage() { return this.done ? STAGES.length - 1 : this.items[this.s.placed].stage; }
@@ -61,12 +77,19 @@ export class Game {
     }
   }
 
-  // Tape sur l'écran : la prochaine livraison arrive un peu plus vite.
-  // Chaque tape avance le camion de 0,1 s, au plus 60 % de l'intervalle par livraison (l'amélioration reste utile).
+  // Revenu de jeu (pièces par seconde), mesuré pendant qu'on joue : sert au revenu hors ligne
+  trackRate(dt) {
+    if (dt <= 0 || dt > 1) return;
+    const k = dt / RATE_TAU;
+    this.s.rate = this.s.rate * (1 - k) + (this.earnedTick / dt) * k;
+    this.earnedTick = 0;
+  }
+
+  // Tape sur l'écran : la prochaine livraison arrive un peu plus vite (au plus 60 % de l'intervalle par livraison)
   rush() {
     const s = this.s, p = this.p;
     if (this.done || Math.min(p.cap, this.remaining) - s.stock <= 0) return 0;
-    const left = p.delivery * RUSH_MAX - (s.rushT || 0), gain = Math.min(RUSH_TAP, left);
+    const left = p.delivery * RUSH_MAX - (s.rushT || 0), gain = Math.min(p.rushTap, left);
     if (gain <= 0) return 0;
     s.rushT = (s.rushT || 0) + gain; this.update(gain, true);
     return gain;
@@ -77,11 +100,12 @@ export class Game {
     const s = this.s;
     if (s.stock <= 0 || this.done) return null;
     const it = this.items[s.placed], gain = itemValue(it.stage, s.level, this.p);
-    s.placed++; s.stock--; s.credits += gain; s.total += gain;
+    s.placed++; s.stock--; s.credits += gain; s.total += gain; this.earnedTick += gain;
     this.emit('place', it, gain, byWorker, s.placed - 1);
     return it;
   }
 
+  // ---------- Améliorations de la maison (pièces) ----------
   cost(key) { return upgradeCost(key, this.s.up[key], this.s.level); }
   canBuy(key) { return this.s.credits >= this.cost(key); }
   buy(key) {
@@ -90,23 +114,49 @@ export class Game {
     return { tierUp: this.s.up[key] % TIER_STEP === 0, tier: tierOf(this.s.up[key]) };
   }
 
-  // Maison terminée : une étoile (+5 % de gains pour toujours, conservée), puis on repart de zéro
-  // sur la maison suivante : crédits, améliorations, stock et livraison
+  // ---------- Boutique d'étoiles ----------
+  perkCost(key) { return perkCost(key, this.s.perks[key]); }
+  buyPerk(key) {
+    const c = this.perkCost(key); if (c === null || this.s.stars < c) return false;
+    this.s.stars -= c; this.s.perks[key]++;
+    return true;
+  }
+  cosmetic(kind, key) { return COSMETICS[kind].find(c => c.key === key); }
+  // Achète (si besoin) puis équipe un élément de personnalisation
+  equip(kind, key) {
+    const c = this.cosmetic(kind, key); if (!c) return false;
+    if (!this.s.owned[kind].includes(key)) {
+      if (this.s.stars < c.cost) return false;
+      this.s.stars -= c.cost; this.s.owned[kind].push(key);
+    }
+    this.s.equip[kind] = key;
+    return true;
+  }
+
+  // Maison terminée : une étoile à dépenser dans la boutique, puis on repart de zéro
+  // sur la maison suivante : pièces, améliorations, stock et livraison
   nextLevel() {
     const s = this.s; if (!this.done) return false;
-    s.stars++; s.level++; s.placed = 0; s.stock = 0; s.deliveryT = 0; s.workerT = 0; s.rushT = 0; s.credits = 0;
+    s.stars++; s.starsTotal++; s.level++; s.placed = 0; s.stock = 0; s.deliveryT = 0; s.workerT = 0; s.rushT = 0; s.credits = 0;
     for (const k in s.up) s.up[k] = 0;
     this.loadHouse(); this.emit('level', s.level);
     return true;
   }
 
-  // Rattrapage de l'absence : on fait tourner le jeu par pas d'une seconde (les poses des ouvriers comptent)
+  // Rattrapage de l'absence :
+  //  - le chantier continue (camion, ouvriers) par pas d'une seconde ;
+  //  - en plus, un revenu de base : une part (25 à 50 %) du revenu mesuré pendant le jeu ;
+  //  - tout ce qui a été gagné va dans le coffre, à récupérer à l'ouverture.
   catchUp(now = Date.now()) {
-    const away = Math.min(OFFLINE_MAX, Math.max(0, (now - (this.s.lastSeen || now)) / 1000));
+    const p = this.p;
+    const away = Math.min(p.offlineHours * 3600, Math.max(0, (now - (this.s.lastSeen || now)) / 1000));
     const before = { credits: this.s.credits, placed: this.s.placed };
     const silent = this.listeners; this.listeners = { place: [], deliver: [], level: [] };
     for (let t = 0; t < away && !this.done; t += 1) this.update(Math.min(1, away - t));
-    this.listeners = silent; this.s.lastSeen = now;
-    return { away, credits: this.s.credits - before.credits, placed: this.s.placed - before.placed };
+    this.listeners = silent; this.s.lastSeen = now; this.earnedTick = 0;
+    const work = this.s.credits - before.credits, base = Math.floor(away * this.s.rate * p.offlineRate);
+    if (away >= 60 && work + base > 0) { this.s.credits -= work; this.s.chest += work + base; }
+    return { away, work, base, placed: this.s.placed - before.placed, chest: this.s.chest };
   }
+  collectChest() { const c = this.s.chest; this.s.credits += c; this.s.chest = 0; return c; }
 }

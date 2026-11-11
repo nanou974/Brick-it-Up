@@ -15,10 +15,10 @@
 <div id="app">
   <canvas id="gl"></canvas>
 
-  <!-- Barre du haut : crédits, étoiles, paramètres -->
+  <!-- Barre du haut : pièces, étoiles (boutique), paramètres -->
   <div id="top">
     <div class="pill" id="pill-credits"><span class="ico" id="i-coin"></span><span id="v-credits">0</span></div>
-    <div class="pill" id="pill-stars"><span class="ico" id="i-star"></span><span id="v-stars">0</span></div>
+    <button class="pill" id="pill-stars" aria-label="Boutique d'étoiles"><span class="ico" id="i-star"></span><span id="v-stars">0</span><span class="shoptag">BOUTIQUE</span></button>
     <button class="round" id="b-menu" aria-label="Paramètres"><span class="ico" id="i-gear"></span></button>
   </div>
 
@@ -69,12 +69,26 @@
     </div>
   </div>
 
-  <!-- Pendant ton absence -->
+  <!-- Coffre : pièces gagnées pendant l'absence -->
   <div class="panel" id="p-away">
     <div class="box">
       <div class="title">PENDANT TON ABSENCE</div>
-      <p id="v-awaytxt"></p>
-      <button class="btn big" id="b-away">SUPER !</button>
+      <div class="chest" id="i-chest"></div>
+      <div class="chestsum"><span class="ico" id="i-coin2"></span><span id="v-chest">0</span></div>
+      <p class="small" id="v-awaytxt"></p>
+      <button class="btn big" id="b-away">RÉCUPÉRER</button>
+    </div>
+  </div>
+
+  <!-- Boutique d'étoiles -->
+  <div class="panel" id="p-shop">
+    <div class="box shop">
+      <div class="title">BOUTIQUE</div>
+      <div class="shopstars"><span class="ico" id="i-star2"></span><span id="v-shopstars">0</span> étoile(s) à dépenser</div>
+      <div class="tabs"><button class="tab on" data-tab="perks">AMÉLIORATIONS</button><button class="tab" data-tab="looks">PERSONNALISATION</button></div>
+      <div class="shoplist" id="shop-perks"></div>
+      <div class="shoplist hidden" id="shop-looks"></div>
+      <button class="btn big" id="b-shopclose">FERMER</button>
     </div>
   </div>
 

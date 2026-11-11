@@ -2,8 +2,8 @@
 import { Game, freshState } from './game.js';
 import { Site } from './scene.js';
 import { Sound } from './audio.js';
-import { STAGES, UPGRADES, params, tierOf, TIER_STEP } from './rules.js';
-import { STAGE_ICONS, UP_ICONS, COIN, STAR, GEAR } from './icons.js';
+import { STAGES, UPGRADES, PERKS, COSMETICS, params, tierOf, TIER_STEP } from './rules.js';
+import { STAGE_ICONS, UP_ICONS, COIN, STAR, GEAR, CHEST } from './icons.js';
 import { VERSION } from './version.js';
 
 const SAVE_KEY = 'brick-it-up-save', VOL_KEY = 'brick-it-up-volume';
@@ -37,11 +37,13 @@ sfx.loadMusic('assets/music/theme.ogg');
 
 // Icônes fixes
 $('i-coin').innerHTML = COIN; $('i-star').innerHTML = STAR; $('i-gear').innerHTML = GEAR; $('i-starbig').innerHTML = STAR;
+$('i-chest').innerHTML = CHEST; $('i-coin2').innerHTML = COIN; $('i-star2').innerHTML = STAR;
 $('v-version').textContent = $('v-version2').textContent = `v${VERSION}`;
 
 // ---------- Chantier ----------
 let lastStage = -1;
 function setupSite() {
+  applySkins();
   site.setHouse(game);
   site.setWorkers(game.p.workers);
   site.setTruck(Math.min(5, tierOf(game.s.up.camion)));
@@ -128,7 +130,7 @@ $('gl').addEventListener('pointerdown', (e) => {
   const g = game.rush(); if (!g) return;
   const now = performance.now(); rushCombo = now - rushLast < 400 ? Math.min(rushCombo + 1, 12) : 0; rushLast = now;
   sfx.rush(rushCombo);
-  const el = document.createElement('div'); el.className = 'gain rush'; el.textContent = '−0,1 s';
+  const el = document.createElement('div'); el.className = 'gain rush'; el.textContent = `−${String(Math.round(g * 100) / 100).replace('.', ',')} s`;
   el.style.left = `${e.clientX}px`; el.style.top = `${e.clientY - 20}px`; $('app').appendChild(el); setTimeout(() => el.remove(), 700);
   const r = $('ring-fg'); r.classList.remove('flash'); void r.getBBox(); r.classList.add('flash');
   site.rushTruck();
@@ -137,7 +139,7 @@ $('gl').addEventListener('pointerdown', (e) => {
 // ---------- Améliorations ----------
 let dirtyCards = true, lastCredits = -1;
 function effect(key) {
-  const a = params(game.s.up, game.s.stars), b = params({ ...game.s.up, [key]: game.s.up[key] + 1 }, game.s.stars);
+  const a = params(game.s.up, game.s.perks), b = params({ ...game.s.up, [key]: game.s.up[key] + 1 }, game.s.perks);
   switch (key) {
     case 'valeur': return `×${dec(a.value, 2)} → ×${dec(b.value, 2)}`;
     case 'livraison': return `${dec(a.delivery)} s → ${dec(b.delivery)} s`;
@@ -216,22 +218,93 @@ function finishHouse() {
   if (!game.done) return;
   sfx.win(); banner('MAISON TERMINÉE !');
   $('v-donetxt').textContent = `${game.house.name} terminé${game.house.fem ? 'e' : ''} ! Tu gagnes une étoile.`;
-  $('v-donebonus').textContent = `Tes étoiles sont conservées : chacune donne +5 % de crédits pour toujours. Sur la prochaine maison, plus grande et plus rentable, tu repars de zéro : crédits et améliorations.`;
+  $('v-donebonus').textContent = `Dépense tes étoiles dans la boutique (bouton ★ en haut) : améliorations pour toujours, camions, tenues, décors. Sur la prochaine maison, tu repars de zéro : pièces et améliorations.`;
   setTimeout(() => show('p-done', true), 1400);
 }
 $('b-next').addEventListener('click', () => { sfx.unlock(); game.nextLevel(); show('p-done', false); setupSite(); banner(`MAISON ${game.s.level} !`); save(); });
 
 // ---------- Absence ----------
+// Absence : le chantier a continué et le coffre s'est rempli ; on récupère les pièces à l'ouverture
+function fmtAway(sec) { const h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60); return h ? `${h} h ${String(m).padStart(2, '0')}` : `${m} min`; }
 function catchUp() {
   const r = game.catchUp();
-  if (r.away > 30 && (r.placed > 0 || r.credits > 0)) {
-    $('v-awaytxt').innerHTML = `Ton équipe a posé <b>${r.placed}</b> élément${r.placed > 1 ? 's' : ''} et gagné <b>${fmt(r.credits)}</b> crédits.`;
+  if (game.s.chest > 0) {
+    $('v-chest').textContent = fmt(game.s.chest);
+    const parts = [`Absent pendant ${fmtAway(r.away)}.`];
+    if (r.placed > 0) parts.push(`Ton équipe a posé ${r.placed} élément${r.placed > 1 ? 's' : ''}.`);
+    if (r.base > 0) parts.push(`Le chantier a rapporté ${fmt(r.base)} pièces (${Math.round(game.p.offlineRate * 100)} % de ton revenu en jeu).`);
+    $('v-awaytxt').textContent = parts.join(' ');
     show('p-away', true);
   }
   setupSite();
   if (game.done) finishHouse();
 }
-$('b-away').addEventListener('click', () => show('p-away', false));
+$('b-away').addEventListener('click', () => {
+  sfx.unlock();
+  const from = $('i-chest').getBoundingClientRect(), to = $('pill-credits').getBoundingClientRect();
+  const got = game.collectChest(); show('p-away', false); save();
+  // Les pièces s'envolent du coffre vers le compteur
+  for (let k = 0; k < 12; k++) {
+    const c = document.createElement('span'); c.className = 'flycoin'; c.innerHTML = COIN;
+    c.style.left = `${from.left + from.width / 2}px`; c.style.top = `${from.top + from.height / 2}px`;
+    c.style.setProperty('--dx', `${to.left + 20 - from.left - from.width / 2}px`); c.style.setProperty('--dy', `${to.top + 12 - from.top - from.height / 2}px`);
+    c.style.animationDelay = `${k * 45}ms`; $('app').appendChild(c); setTimeout(() => c.remove(), 1100 + k * 45);
+    setTimeout(() => sfx.coin(), 500 + k * 45);
+  }
+  floatGain(`+${fmt(got)}`);
+  refresh(true);
+});
+
+// ---------- Boutique d'étoiles ----------
+function applySkins() {
+  const e = game.s.equip, t = game.cosmetic('truck', e.truck), w = game.cosmetic('worker', e.worker);
+  site.setSkins({ truck: { model: t.model, color: t.color }, worker: { vest: w.vest, hat: w.hat }, decor: e.decor }, game);
+}
+const LOOK_KINDS = [['truck', 'Camion'], ['worker', 'Tenue des ouvriers'], ['decor', 'Décor']];
+const hex = (c) => `#${c.toString(16).padStart(6, '0')}`;
+const DECOR_SWATCH = { prairie: ['#8FCFF5', '#7CC35A'], mer: ['#79D2F2', '#EAD7A0'], montagne: ['#BFD9EE', '#EEF3F7'], automne: ['#F4D6A8', '#D9822B'], ville: ['#A9C4D8', '#9A9EA3'] };
+function swatch(kind, c) {
+  if (kind === 'truck') return `<span class="sw" style="background:${hex(c.color)}"></span>`;
+  if (kind === 'worker') return `<span class="sw" style="background:linear-gradient(${hex(c.hat)} 0 40%, ${hex(c.vest)} 40%)"></span>`;
+  const [a, b] = DECOR_SWATCH[c.key]; return `<span class="sw" style="background:linear-gradient(${a} 0 55%, ${b} 55%)"></span>`;
+}
+function renderShop() {
+  const s = game.s;
+  $('v-shopstars').textContent = s.stars;
+  $('shop-perks').innerHTML = PERKS.map(p => {
+    const n = s.perks[p.key], cost = game.perkCost(p.key), max = p.cost.length;
+    const now = n > 0 ? p.desc(n) : 'Pas encore acheté', next = cost === null ? 'Niveau maximum' : `Niveau ${n + 1} : ${p.desc(n + 1)}`;
+    return `<div class="srow"><div class="stxt"><b>${p.name}</b> <span class="pips">${'<i class="on"></i>'.repeat(n)}${'<i></i>'.repeat(max - n)}</span>
+      <small>${now}</small><small class="next">${next}</small></div>
+      <button data-perk="${p.key}" ${cost === null || s.stars < cost ? 'disabled' : ''}>${cost === null ? 'MAX' : `<span class="ico">${STAR}</span>${cost}`}</button></div>`;
+  }).join('');
+  $('shop-looks').innerHTML = LOOK_KINDS.map(([kind, label]) => `<div class="lookhead">${label}</div><div class="looks">` + COSMETICS[kind].map(c => {
+    const owned = s.owned[kind].includes(c.key), on = s.equip[kind] === c.key;
+    const btn = on ? 'CHOISI' : owned ? 'CHOISIR' : `<span class="ico">${STAR}</span>${c.cost}`;
+    return `<button class="look${on ? ' on' : ''}" data-kind="${kind}" data-key="${c.key}" ${!owned && s.stars < c.cost ? 'disabled' : ''}>${swatch(kind, c)}<span class="lname">${c.name}</span><span class="lbtn">${btn}</span></button>`;
+  }).join('') + '</div>').join('');
+}
+$('pill-stars').addEventListener('click', () => { sfx.unlock(); renderShop(); show('p-shop', true); });
+$('b-shopclose').addEventListener('click', () => show('p-shop', false));
+for (const t of document.querySelectorAll('.tab')) t.addEventListener('click', () => {
+  document.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x === t));
+  $('shop-perks').classList.toggle('hidden', t.dataset.tab !== 'perks'); $('shop-looks').classList.toggle('hidden', t.dataset.tab !== 'looks');
+});
+$('shop-perks').addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-perk]'); if (!b) return;
+  if (!game.buyPerk(b.dataset.perk)) { sfx.denied(); return; }
+  sfx.tier();
+  // Effets immédiats : ouvriers de départ, camion
+  site.setWorkers(game.p.workers); site.setStock(game.s.stock, game.p.cap);
+  renderShop(); refresh(true); save();
+});
+$('shop-looks').addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-kind]'); if (!b) return;
+  const owned = game.s.owned[b.dataset.kind].includes(b.dataset.key);
+  if (!game.equip(b.dataset.kind, b.dataset.key)) { sfx.denied(); return; }
+  owned ? sfx.buy() : sfx.tier();
+  applySkins(); renderShop(); refresh(true); save();
+});
 document.addEventListener('visibilitychange', () => { if (document.hidden) { save(); sfx.pause(true); } else { sfx.pause(false); catchUp(); } });
 addEventListener('pagehide', save);
 
@@ -254,6 +327,7 @@ let last = performance.now(), uiT = 0, saveT = 0;
 function frame(now) {
   const dt = Math.min(0.1, (now - last) / 1000); last = now;
   game.update(dt);
+  game.trackRate(dt);
   updateHold(dt);
   site.update(dt, game);
   truckSounds(dt);
