@@ -45,4 +45,13 @@ html = html.replace(/<link href="https:\/\/fonts\.googleapis\.com[^>]*>/, '<link
 if (/googleapis|jsdelivr/.test(html)) throw new Error('index.html contient encore une ressource en ligne');
 fs.writeFileSync(path.join(www, 'index.html'), html);
 
+// Version web installable : manifeste + service worker (le jeu marche sans connexion une fois ouvert)
+fs.copyFileSync(path.join(root, 'manifest.webmanifest'), path.join(www, 'manifest.webmanifest'));
+const files = [];
+(function walk(d) { for (const f of fs.readdirSync(d, { withFileTypes: true })) { const p = path.join(d, f.name); if (f.isDirectory()) walk(p); else files.push(path.relative(www, p).split(path.sep).join('/')); } })(www);
+const version = fs.readFileSync(path.join(root, 'src/game/version.js'), 'utf8').match(/'([\d.]+)'/)[1];
+const sw = fs.readFileSync(path.join(root, 'tools/sw-template.js'), 'utf8')
+  .replace('__VERSION__', version).replace('__FILES__', JSON.stringify(['./', ...files.filter(f => f !== 'index.html')]));
+fs.writeFileSync(path.join(www, 'sw.js'), sw);
+
 console.log('www/ prêt');

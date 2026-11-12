@@ -367,5 +367,15 @@ function frame(now) {
 }
 catchUp();
 requestAnimationFrame(frame);
+// Version web : service worker pour jouer sans connexion et installer le jeu sur l'écran d'accueil
+// Mise à jour automatique : quand une nouvelle version vient de s'installer, on recharge tout de suite
+// si le joueur est encore sur l'écran titre ; sinon, elle sera utilisée au prochain lancement.
+if ('serviceWorker' in navigator && !window.Capacitor && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+  const hadSW = !!navigator.serviceWorker.controller;
+  addEventListener('load', () => navigator.serviceWorker.register('sw.js').then(r => r.update()).catch(() => {}));
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (hadSW && $('p-start').classList.contains('show')) { save(); location.reload(); }
+  });
+}
 // Accès de débogage pour les tests automatiques
 window.__bu = { game, site, save, sfx };

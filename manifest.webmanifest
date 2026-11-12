@@ -1,0 +1,17 @@
+{
+  "name": "Brick'it Up",
+  "short_name": "Brick'it Up",
+  "description": "Pose les éléments livrés par le camion, améliore ton chantier et construis des maisons de plus en plus grandes.",
+  "lang": "fr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "portrait",
+  "background_color": "#8FCFF5",
+  "theme_color": "#8FCFF5",
+  "icons": [
+    { "src": "assets/icon/brick-it-up-icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "assets/icon/brick-it-up-icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "assets/icon/brick-it-up-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

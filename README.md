@@ -4,7 +4,9 @@ Jeu mobile 3D incrémental (Three.js + Capacitor) : le camion livre les matéria
 
 ## Jouer
 - **APK Android** : onglet *Releases* du dépôt, fichier `BrickItUp-vX.Y.Z.apk`. Il s'installe par-dessus la version précédente.
-- **Navigateur** : `npm run serve`, puis ouvrir http://localhost:8080 (format portrait).
+- **Version web (iPhone, iPad, PC…)** : https://nanou974.github.io/Brick-it-Up/ — mise à jour automatiquement à chaque nouvelle version.
+  Sur iPhone : ouvrir le lien dans **Safari**, bouton Partager → **« Sur l'écran d'accueil »**. Le jeu s'ouvre alors en plein écran, avec son icône, et marche sans connexion.
+- **En local** : `npm run serve`, puis ouvrir http://localhost:8080 (format portrait).
 
 ## Principe
 1. Le camion livre un élément toutes les 10 s (au début).
@@ -27,4 +29,4 @@ Les étapes de chaque maison : fondations (parpaings), murs (briques), charpente
 - `docs/GDD.md` : règles détaillées
 
 ## Publier une version
-Augmenter `VERSION` dans `src/game/version.js`, écrire `docs/release-notes.md`, pousser sur `main` : GitHub Actions compile l'APK et crée la release.
+Augmenter `VERSION` dans `src/game/version.js`, écrire `docs/release-notes.md`, pousser sur `main` : GitHub Actions compile l'APK et crée la release, et publie la version web (workflow `pages.yml`). La version web est gardée hors connexion par un service worker (`tools/sw-template.js`, généré dans `www/sw.js`).
