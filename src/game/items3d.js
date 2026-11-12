@@ -38,6 +38,14 @@ export function makeItem(it) {
       for (let k = 0; k < 2; k++) g.add(box(L * 0.22, 0.012, 0.13, mat(0xF2F2EC), -L / 4 + k * L / 2, 0.086, 0));
       break;
     }
+    case 'chemin-terre': { // côté de rue pas encore goudronné : terre battue et ornières
+      const dirt = mat(0xA8875E, { roughness: 1 }), dark = mat(0x8E6F4A, { roughness: 1 });
+      if (it.square) { g.add(box(it.len, 0.04, it.len, dirt, 0, 0.02, 0)); break; }
+      g.add(box(it.len, 0.04, 4.8, dirt, 0, 0.02, 0));
+      for (const z of [-0.9, 0.9]) g.add(box(it.len, 0.015, 0.45, dark, 0, 0.045, z));
+      for (let k = 0; k < 4; k++) g.add(new THREE.Mesh(new THREE.IcosahedronGeometry(0.18 + (k % 2) * 0.1, 0), mat(0x9AA0A6)).translateX(-it.len / 2 + 2 + k * it.len / 4).translateZ(k % 2 ? 2.1 : -2.2).translateY(0.08));
+      break;
+    }
     case 'carrefour': { // carrefour : chaussée, coins de trottoir, passages piétons
       g.add(box(7, 0.08, 7, mat(0x45494F, { roughness: 0.95 }), 0, 0.04, 0));
       for (const sx of [-1, 1]) for (const sz of [-1, 1]) g.add(box(1.3, 0.14, 1.3, mat(0xC9C4B8), sx * 2.85, 0.07, sz * 2.85));

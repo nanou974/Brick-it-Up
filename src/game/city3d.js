@@ -5,7 +5,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { makeItem } from './items3d.js';
 import { houseFor } from './houses.js';
 import { buildHouse, coarsen } from './house.js';
-import { LOT, STREET, lotCenter, voirieItems } from './city.js';
+import { LOT, STREET, lotCenter, allStreets } from './city.js';
 
 const cityMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85, flatShading: true });
 
@@ -50,7 +50,7 @@ export class CityView {
     // Rues terminées : toutes celles des parcelles précédentes, en un seul objet
     if (this.streets) { this.group.remove(this.streets); this.streets.geometry.dispose(); this.streets = null; }
     const items = [];
-    for (let k = 0; k < done; k++) { const o = lotCenter(k); for (const it of voirieItems(k, 0)) items.push({ ...it, x: it.x + o.x, z: it.z + o.z }); }
+    for (let k = 0; k < done; k++) { const o = lotCenter(k); for (const it of allStreets(k)) items.push({ ...it, x: it.x + o.x, z: it.z + o.z }); }
     if (items.length) { this.streets = bake(items); this.group.add(this.streets); }
     // Bâtiments à (re)construire, les plus proches du chantier d'abord (un par image)
     this.queue = [];

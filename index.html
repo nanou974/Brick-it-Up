@@ -112,11 +112,31 @@
       <div class="title">PARAMÈTRES</div>
       <label class="row">Musique <input type="range" id="r-music" min="0" max="100" value="60"></label>
       <label class="row">Sons <input type="range" id="r-sfx" min="0" max="100" value="80"></label>
+      <button class="btn" id="b-code">CODE DE SAUVEGARDE</button>
       <button class="btn" id="b-reset">RECOMMENCER À ZÉRO</button>
       <button class="btn big" id="b-menuclose">FERMER</button>
       <div class="ver" id="v-version2"></div>
     </div>
   </div>
+</div>
+<!-- Code de sauvegarde (copier la partie sur un autre appareil) -->
+<div class="panel" id="p-code">
+  <div class="box">
+    <div class="title">CODE DE SAUVEGARDE</div>
+    <p class="small">Pour retrouver ta partie sur un autre appareil : copie ce code, envoie-le-toi, puis colle-le dans « Charger un code » sur l'autre appareil.</p>
+    <textarea id="t-code-out" readonly rows="3"></textarea>
+    <div class="duo"><button class="btn" id="b-code-copy">COPIER</button><button class="btn" id="b-code-share">PARTAGER</button></div>
+    <div class="subtitle">CHARGER UN CODE</div>
+    <textarea id="t-code-in" rows="3" placeholder="Colle ici un code BIU1-…"></textarea>
+    <div id="v-code-msg"></div>
+    <button class="btn" id="b-code-load">CHARGER CETTE PARTIE</button>
+    <button class="btn big" id="b-code-close">FERMER</button>
+  </div>
+</div>
+<!-- Mise à jour disponible (version web) -->
+<div id="update-bar">
+  <div id="v-update">Nouvelle version disponible !</div>
+  <div class="duo"><button class="btn big" id="b-update">REDÉMARRER</button><button class="btn" id="b-update-later">PLUS TARD</button></div>
 </div>
 <script type="module" src="src/game/main.js"></script>
 </body>

@@ -22,7 +22,7 @@
 ## La ville
 Chaque construction terminée reste en place : elles forment une ville qui grandit autour d'une place centrale (fontaine, bancs, massifs).
 - Parcelles de 32 m posées en spirale autour de la place ; rues de 7 m de large (chaussée, trottoirs, bordures, réverbères, arbres).
-- Chaque chantier commence par l'étape **Voirie** : on pose les rues qui bordent la parcelle et qui n'existent pas encore (24 éléments pour la première, 11 à 17 ensuite).
+- Chaque chantier commence par l'étape **Voirie** : on pose une seule rue, celle par laquelle arrive le camion (6 à 7 éléments). Les autres côtés neufs de la parcelle restent en chemin de terre et sont goudronnés automatiquement, en récompense, quand la construction est terminée.
 - Les constructions terminées sont affichées en version simplifiée et fusionnée (une par image au chargement) pour que la ville reste fluide.
 - On peut dézoomer et glisser à deux doigts pour voir toute la ville.
 
@@ -108,3 +108,15 @@ Contenu tiré à l'ouverture : entre 60 % et 90 % du prix moyen des 5 améliorat
 
 ## Durée (simulation, joueur actif)
 En dépensant ses étoiles (`PERKS=1 LEVELS=30 node tools/sim.mjs`) : Cabanon ≈ 6,5 min, puis 7 à 15 min par construction (les plus longues : Église et Ferme ≈ 15 min, Château ≈ 12 min), environ 5 h pour les 30 constructions.
+
+## Camion
+Le modèle grandit avec l'amélioration « Camion » (un palier toutes les 5 améliorations) : petit utilitaire → camion plateau → camion avec grue → 3 essieux avec grue et gyrophare → semi-remorque.
+La boutique choisit la carrosserie (plateau, benne, américain) et la couleur. Le chargement montre les éléments de l'étape en cours (bordures, parpaings, briques, poutres, tuiles, fenêtres, plantes) ; le camion repart à vide.
+Animations : roues qui tournent, feux stop et cabine qui plonge au freinage, fumée au démarrage, grue qui pivote vers la palette, phares allumés au crépuscule du feu d'artifice.
+
+## Sauvegarde
+- Enregistrée sur l'appareil (localStorage), toutes les 5 s et en quittant.
+- Code de sauvegarde (Paramètres) : la partie est compressée puis chiffrée (AES-GCM) dans un texte « BIU1-… » d'environ 400 caractères, à copier ou partager, puis à coller sur un autre appareil. Un code abîmé ou modifié est refusé.
+
+## Mises à jour (version web)
+Le jeu vérifie s'il existe une nouvelle version au lancement, au retour dans le jeu et toutes les 10 minutes. Sur l'écran titre, il recharge tout seul ; en pleine partie, un bandeau propose de redémarrer (partie sauvegardée) ou plus tard.

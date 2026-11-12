@@ -2,14 +2,14 @@
 // revenu hors ligne. Sans affichage.
 import { STAGES, UPGRADES, PERKS, COSMETICS, houseFor, params, itemValue, upgradeCost, perkCost, tierOf, TIER_STEP, CHEST_MIN_SHARE, CHEST_MAX_SHARE } from './rules.js';
 import { buildHouse, stageCounts } from './house.js';
-import { voirieItems } from './city.js';
+import { voirieItems, oldVoirieCount } from './city.js';
 
 export const RUSH_MAX = 0.6; // tapes sur l'écran : au plus 60 % de l'intervalle par livraison
 const RATE_TAU = 180;        // le revenu de jeu est mesuré sur environ 3 minutes
 
 export function freshState() {
   return {
-    v: 3, level: 1, stars: 0, starsTotal: 0, credits: 0, placed: 0, stock: 0, deliveryT: 0, workerT: 0, rushT: 0,
+    v: 4, level: 1, stars: 0, starsTotal: 0, credits: 0, placed: 0, stock: 0, deliveryT: 0, workerT: 0, rushT: 0,
     up: Object.fromEntries(UPGRADES.map(u => [u.key, 0])),
     perks: Object.fromEntries(PERKS.map(p => [p.key, 0])),
     owned: { truck: ['jaune'], worker: ['orange'], decor: ['prairie'] },
@@ -32,6 +32,8 @@ export class Game {
     this.s.equip = { ...f.equip, ...(this.s.equip || {}) };
     if (this.s.v < 2) { this.s.starsTotal = this.s.stars; this.s.v = 2; } // ancienne sauvegarde : les étoiles deviennent une monnaie
     if (this.s.v < 3) { this.s.v = 3; this.migrateVoirie = true; } // la voirie s'ajoute avant la maison en cours
+    else if (this.s.v < 4) this.shortVoirie = true; // la voirie passe de 4 côtés à 1 seul
+    this.s.v = Math.max(this.s.v, 4);
     if (this.s.chest > 0) { this.s.credits += this.s.chest; this.s.chest = 0; } // ancien coffre hors ligne : on rend les pièces
     this.listeners = { place: [], deliver: [], level: [] };
     this.earnedTick = 0;
@@ -39,7 +41,9 @@ export class Game {
     this.loadHouse();
     // Ancienne sauvegarde au milieu d'une maison : la voirie de sa parcelle est considérée comme déjà faite
     if (this.migrateVoirie && this.s.placed > 0) this.s.placed = Math.min(this.items.length, this.s.placed + this.voirie.length);
-    this.migrateVoirie = false;
+    // Partie en cours en version 0.8 / 0.9 : on retire les côtés de rue qui ne sont plus à poser
+    if (this.shortVoirie && this.s.placed > 0) { const old = oldVoirieCount(this.s.level - 1), now = this.voirie.length; this.s.placed = this.s.placed < old ? Math.min(this.s.placed, now) : Math.min(this.items.length, this.s.placed - old + now); }
+    this.migrateVoirie = this.shortVoirie = false;
   }
   on(ev, fn) { this.listeners[ev].push(fn); }
   emit(ev, ...a) { for (const f of this.listeners[ev]) f(...a); }

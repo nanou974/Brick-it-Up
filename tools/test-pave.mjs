@@ -1,0 +1,15 @@
+import { chromium } from 'playwright-core';
+import http from 'node:http'; import fs from 'node:fs'; import path from 'node:path';
+const root = path.resolve('www');
+const ty = { '.js': 'text/javascript', '.html': 'text/html', '.css': 'text/css', '.png': 'image/png', '.woff2': 'font/woff2', '.ogg': 'audio/ogg', '.json': 'application/json' };
+const srv = http.createServer((q, r) => { let f = path.join(root, decodeURIComponent(q.url.split('?')[0])); if (f.endsWith('/')) f += 'index.html'; fs.readFile(f, (e, d) => { if (e) { r.statusCode = 404; return r.end(); } r.setHeader('Content-Type', ty[path.extname(f)] || 'application/octet-stream'); r.end(d); }); }).listen(8798);
+const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1243/chrome-linux64/chrome', args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
+const p = await b.newPage({ viewport: { width: 390, height: 844 } }); const errs = []; p.on('pageerror', e => errs.push(e.message));
+await p.goto('http://localhost:8798/index.html'); await p.waitForTimeout(2500); await p.click('#b-start');
+await p.evaluate(() => { const { game, site } = window.__bu; game.s.level = 4; game.s.up.camion = 10; game.s.placed = 3; game.loadHouse(); site.setHouse(game); site.setTruck(2, true); game.s.deliveryT = game.p.delivery * 0.9; });
+await p.waitForTimeout(2500); await p.screenshot({ path: '/tmp/claude-0/v1.png', clip: { x: 0, y: 0, width: 390, height: 640 } });
+await p.evaluate(() => { const { game, site } = window.__bu; game.s.placed = game.items.length - 1; site.setHouse(game); site.zoomTarget = 2.2; });
+await p.waitForTimeout(1500); await p.screenshot({ path: '/tmp/claude-0/v2.png', clip: { x: 0, y: 0, width: 390, height: 640 } });
+await p.evaluate(() => window.__bu.site.paveRest()); await p.waitForTimeout(400); await p.screenshot({ path: '/tmp/claude-0/v3.png', clip: { x: 0, y: 0, width: 390, height: 640 } });
+await p.waitForTimeout(1500); await p.screenshot({ path: '/tmp/claude-0/v4.png', clip: { x: 0, y: 0, width: 390, height: 640 } });
+console.log(errs.slice(0, 5)); await b.close(); srv.close();

@@ -17,7 +17,7 @@ copy('assets/icon', 'assets/icon');
 copy('assets/music/theme.ogg', 'assets/music/theme.ogg'); // musique pré-calculée (tools/music-render.mjs)
 
 // Three.js et les deux modules complémentaires utilisés
-for (const f of ['build/three.module.js', 'build/three.core.js', 'examples/jsm/utils/BufferGeometryUtils.js']) {
+for (const f of ['build/three.module.js', 'build/three.core.js', 'examples/jsm/utils/BufferGeometryUtils.js', 'examples/jsm/geometries/RoundedBoxGeometry.js']) {
   copy(path.join('node_modules/three', f), path.join('lib/three', f));
 }
 
@@ -47,6 +47,8 @@ fs.writeFileSync(path.join(www, 'index.html'), html);
 
 // Version web installable : manifeste + service worker (le jeu marche sans connexion une fois ouvert)
 fs.copyFileSync(path.join(root, 'manifest.webmanifest'), path.join(www, 'manifest.webmanifest'));
+const ver0 = fs.readFileSync(path.join(root, 'src/game/version.js'), 'utf8').match(/'([\d.]+)'/)[1];
+fs.writeFileSync(path.join(www, 'version.json'), JSON.stringify({ version: ver0 })); // lu par le bandeau « nouvelle version »
 const files = [];
 (function walk(d) { for (const f of fs.readdirSync(d, { withFileTypes: true })) { const p = path.join(d, f.name); if (f.isDirectory()) walk(p); else files.push(path.relative(www, p).split(path.sep).join('/')); } })(www);
 const version = fs.readFileSync(path.join(root, 'src/game/version.js'), 'utf8').match(/'([\d.]+)'/)[1];

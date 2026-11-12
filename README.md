@@ -22,6 +22,8 @@ Les étapes de chaque maison : voirie (les rues de la parcelle), fondations (par
 - `src/game/house.js` : génère la liste des éléments d'une maison (volumes, toits, ouvertures, finitions)
 - `src/game/items3d.js` : dessin 3D de chaque élément
 - `src/game/city.js` : plan de la ville (parcelles en spirale, rues de chaque parcelle)
+- `src/game/truck.js` : camion de livraison (modèles par palier, chargement, animations)
+- `src/game/savecode.js` : code de sauvegarde chiffré
 - `src/game/city3d.js` : affichage de la ville (constructions terminées fusionnées, rues, place)
 - `src/game/game.js` : moteur (livraisons, pose, ouvriers, achats, absence)
 - `src/game/scene.js` : scène 3D (chantier, camion, palette, ouvriers)

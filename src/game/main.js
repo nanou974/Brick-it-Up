@@ -4,6 +4,7 @@ import { Site } from './scene.js';
 import { Sound } from './audio.js';
 import { STAGES, UPGRADES, PERKS, COSMETICS, params, tierOf, TIER_STEP } from './rules.js';
 import { STAGE_ICONS, UP_ICONS, COIN, STAR, GEAR, CHEST } from './icons.js';
+import { encodeSave, decodeSave } from './savecode.js';
 import { VERSION } from './version.js';
 
 const SAVE_KEY = 'brick-it-up-save', VOL_KEY = 'brick-it-up-volume';
@@ -22,7 +23,8 @@ const dec = (x, d = 1) => x.toLocaleString('fr-FR', { minimumFractionDigits: d, 
 
 // ---------- Sauvegarde ----------
 function load() { try { return JSON.parse(localStorage.getItem(SAVE_KEY)); } catch { return null; } }
-function save() { try { game.s.lastSeen = Date.now(); localStorage.setItem(SAVE_KEY, JSON.stringify(game.s)); } catch {} }
+let saving = true; // désactivé pendant le chargement d'un code (sinon la partie actuelle écraserait la nouvelle)
+function save() { if (!saving) return; try { game.s.lastSeen = Date.now(); localStorage.setItem(SAVE_KEY, JSON.stringify(game.s)); } catch {} }
 
 const game = new Game(load());
 const site = new Site($('gl'));
@@ -228,6 +230,8 @@ function finishHouse() {
   // Klaxon de victoire et feux d'artifice au-dessus de la maison
   sfx.victory(); banner(game.house.pub ? 'BÂTIMENT TERMINÉ !' : 'MAISON TERMINÉE !');
   site.fireworks(3.4, () => sfx.rocket(), () => sfx.burst());
+  // Les autres côtés de la parcelle sont goudronnés d'un coup (offert)
+  setTimeout(() => { if (site.paveRest()) { for (let k = 0; k < 4; k++) setTimeout(() => sfx.place('voirie', true), k * 120); } }, 700);
   $('v-donetxt').textContent = `${game.house.name} terminé${game.house.fem ? 'e' : ''} ! Tu gagnes une étoile.`;
   $('v-donebonus').textContent = `Dépense tes étoiles dans la BOUTIQUE (bouton en haut) : améliorations pour toujours, camions, tenues, décors. Sur la prochaine construction, tu repars de zéro : pièces et améliorations.`;
   setTimeout(() => show('p-done', true), 3000); // on laisse le temps d'admirer le feu d'artifice
@@ -341,6 +345,39 @@ $('b-reset').addEventListener('click', () => {
 });
 $('b-start').addEventListener('click', () => { sfx.unlock(); show('p-start', false); });
 
+// ---------- Code de sauvegarde ----------
+$('b-code').addEventListener('click', async () => {
+  show('p-menu', false); disarm(); show('p-code', true); codeMsg('');
+  $('t-code-out').value = 'Préparation du code…'; $('t-code-in').value = ''; codeArmed = null;
+  try { save(); $('t-code-out').value = await encodeSave(game.s); } catch { $('t-code-out').value = 'Impossible de créer le code sur cet appareil.'; }
+});
+$('b-code-close').addEventListener('click', () => show('p-code', false));
+function codeMsg(t, cls = '') { const m = $('v-code-msg'); m.textContent = t; m.className = cls; }
+$('b-code-copy').addEventListener('click', async () => {
+  const t = $('t-code-out').value;
+  try { await navigator.clipboard.writeText(t); codeMsg('Code copié !', 'good'); }
+  catch { $('t-code-out').select(); document.execCommand('copy'); codeMsg('Code copié !', 'good'); }
+});
+$('b-code-share').addEventListener('click', async () => {
+  const t = $('t-code-out').value;
+  if (navigator.share) { try { await navigator.share({ title: "Brick'it Up : ma partie", text: t }); } catch {} }
+  else { try { await navigator.clipboard.writeText(t); } catch {} codeMsg('Partage indisponible ici : le code est copié.', 'good'); }
+});
+// Charger : on vérifie le code, on montre ce qu'il contient, puis on demande une confirmation
+let codeArmed = null;
+$('t-code-in').addEventListener('input', () => { codeArmed = null; $('b-code-load').classList.remove('armed'); $('b-code-load').textContent = 'CHARGER CETTE PARTIE'; codeMsg(''); });
+$('b-code-load').addEventListener('click', async () => {
+  if (codeArmed) {
+    saving = false; localStorage.setItem(SAVE_KEY, JSON.stringify(codeArmed)); location.reload(); return;
+  }
+  try {
+    const st = await decodeSave($('t-code-in').value);
+    codeArmed = st;
+    codeMsg(`Construction n° ${st.level}, ${st.stars || 0} étoile${(st.stars || 0) > 1 ? 's' : ''}. Elle remplacera ta partie actuelle.`, 'good');
+    $('b-code-load').classList.add('armed'); $('b-code-load').textContent = 'TOUCHE ENCORE POUR CONFIRMER';
+  } catch (e) { codeMsg(e.message || 'Code invalide.', 'bad'); }
+});
+
 // ---------- Ouvriers ----------
 // En jeu, chaque ouvrier visible libre prend un élément du stock et le porte à pied jusqu'à la maison :
 // la cadence vient de leurs trajets. Au-delà de 8 ouvriers (affichés au maximum), les autres les font marcher plus vite.
@@ -371,15 +408,26 @@ function frame(now) {
 }
 catchUp();
 requestAnimationFrame(frame);
-// Version web : service worker pour jouer sans connexion et installer le jeu sur l'écran d'accueil
-// Mise à jour automatique : quand une nouvelle version vient de s'installer, on recharge tout de suite
-// si le joueur est encore sur l'écran titre ; sinon, elle sera utilisée au prochain lancement.
+// Version web : service worker pour jouer sans connexion et installer le jeu sur l'écran d'accueil.
+// Mise à jour : le jeu vérifie régulièrement s'il existe une nouvelle version. Quand elle est prête :
+// sur l'écran titre, on recharge tout de suite ; en pleine partie, on prévient le joueur et on lui propose de redémarrer.
 if ('serviceWorker' in navigator && !window.Capacitor && (location.protocol === 'https:' || location.hostname === 'localhost')) {
   const hadSW = !!navigator.serviceWorker.controller;
-  addEventListener('load', () => navigator.serviceWorker.register('sw.js').then(r => r.update()).catch(() => {}));
-  navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (hadSW && $('p-start').classList.contains('show')) { save(); location.reload(); }
+  let reg = null;
+  const check = () => { if (reg) reg.update().catch(() => {}); };
+  addEventListener('load', () => navigator.serviceWorker.register('sw.js').then(r => { reg = r; check(); }).catch(() => {}));
+  setInterval(check, 10 * 60 * 1000); // toutes les 10 minutes
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) check(); }); // et au retour dans le jeu
+  navigator.serviceWorker.addEventListener('controllerchange', async () => {
+    if (!hadSW) return; // première installation : rien de neuf
+    if ($('p-start').classList.contains('show')) { save(); location.reload(); return; }
+    let v = '';
+    try { v = (await (await fetch('version.json', { cache: 'no-store' })).json()).version; } catch {}
+    $('v-update').textContent = v && v !== VERSION ? `Nouvelle version ${v} disponible !` : 'Nouvelle version disponible !';
+    $('update-bar').classList.add('show');
   });
+  $('b-update').addEventListener('click', () => { save(); location.reload(); });
+  $('b-update-later').addEventListener('click', () => $('update-bar').classList.remove('show'));
 }
 // Accès de débogage pour les tests automatiques
 window.__bu = { game, site, save, sfx };

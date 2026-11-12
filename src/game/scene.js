@@ -2,8 +2,10 @@
 import * as THREE from 'three';
 import { makeItem } from './items3d.js';
 import { DECORS, buildDecor } from './decor.js';
-import { CityView } from './city3d.js';
-import { LOT, STREET, cityBounds, lotCenter } from './city.js';
+import { CityView, bake } from './city3d.js';
+import { makeTruck, setTruckLoad, truckSlots } from './truck.js';
+import { STAGES } from './rules.js';
+import { LOT, STREET, cityBounds, lotCenter, pendingStreets } from './city.js';
 
 const ZOOM_MIN = 0.55, ZOOM_MAX = 3.6; // 0,55 = tout près, 3,6 = vue sur la ville
 const rnd = (a) => { const x = Math.sin(a * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
@@ -16,43 +18,6 @@ function mat(key, color, opt = {}) {
 }
 const box = (w, h, d, m) => new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m);
 function shadows(o, cast = true, receive = true) { o.traverse(c => { if (c.isMesh) { c.castShadow = cast; c.receiveShadow = receive; } }); return o; }
-
-// Camion de livraison : modèle et couleur choisis dans la boutique (skin) ;
-// plus grand, plus chargé et avec un gyrophare aux paliers de l'amélioration « Camion » (tier)
-export function makeTruck(tier, skin = { model: 'plateau', color: 0xF2A900 }) {
-  const g = new THREE.Group(), k = 1 + 0.12 * tier, col = mat(`cab-${skin.color}`, skin.color);
-  const chrome = mat('chrome', 0xD8DDE3, { metalness: 0.7, roughness: 0.25 }), glass = mat('vitre', 0x8FD3F4);
-  const us = skin.model === 'americain', cabX = us ? 1.2 * k : 1.6 * k;
-  const cab = box(1.4, us ? 1.6 : 1.3, 1.6, col); cab.position.set(cabX, us ? 1.1 : 0.95, 0); g.add(cab);
-  const win = box(0.05, 0.5, 1.3, glass); win.position.set(cabX + 0.71, us ? 1.5 : 1.25, 0); g.add(win);
-  if (us) {
-    // Américain : long capot, calandre chromée, cheminées d'échappement
-    const hood = box(1.3, 0.8, 1.4, col); hood.position.set(cabX + 1.3, 0.85, 0); g.add(hood);
-    const grill = box(0.08, 0.7, 1.2, chrome); grill.position.set(cabX + 1.97, 0.85, 0); g.add(grill);
-    for (const z of [-0.85, 0.85]) { const st = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 2.2, 8), chrome); st.position.set(cabX - 0.75, 1.5, z); g.add(st); }
-  }
-  const chassis = box((us ? 5.2 : 4) * k, 0.25, 1.2, mat('chassis', 0x2A2D31)); chassis.position.set(us ? 0.4 : 0.1, 0.35, 0); g.add(chassis);
-  const bedX = -0.4 * k - (us ? 0.6 : 0);
-  if (skin.model === 'benne') {
-    // Benne : caisse ouverte de la couleur du camion
-    const bm = col, L = 2.6 * k;
-    const floor = box(L, 0.15, 1.7, mat('plateau', 0x5A5F66)); floor.position.set(bedX, 0.6, 0); g.add(floor);
-    for (const z of [-0.8, 0.8]) { const side = box(L, 0.7, 0.1, bm); side.position.set(bedX, 1.0, z); g.add(side); }
-    const back = box(0.1, 0.7, 1.7, bm); back.position.set(bedX - L / 2, 1.0, 0); g.add(back);
-    const front = box(0.1, 0.9, 1.7, bm); front.position.set(bedX + L / 2, 1.1, 0); g.add(front);
-  } else { const bed = box(2.6 * k, 0.25, 1.7, mat('plateau', 0x5A5F66)); bed.position.set(bedX, 0.55, 0); g.add(bed); }
-  for (const x of [cabX, -0.6 * k - (us ? 0.6 : 0), ...(tier >= 3 || us ? [-1.4 * k - (us ? 0.6 : 0)] : [])]) for (const z of [-0.8, 0.8]) {
-    const w = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.36, 0.3, 12), mat('pneu', 0x1E1F22)); w.rotation.x = Math.PI / 2; w.position.set(x, 0.36, z); g.add(w);
-    const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.32, 8), us ? chrome : mat('jante', 0xB9BDC1)); hub.rotation.x = Math.PI / 2; hub.position.set(x, 0.36, z); g.add(hub);
-  }
-  // Chargement : palettes de parpaings, de plus en plus nombreuses
-  const n = 1 + tier;
-  for (let i = 0; i < n; i++) {
-    const p = box(0.7, 0.45, 0.7, mat('parpaing', 0x9AA0A6)); p.position.set(bedX + (i - (n - 1) / 2) * 0.75 * Math.min(1, 3 / n) * k, 0.9, (i % 2 ? 0.3 : -0.3) * (n > 3 ? 1 : 0)); g.add(p);
-  }
-  if (tier >= 5) { const gyro = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.15, 8), mat('gyro', 0xFF8A00, { emissive: 0xFF6A00, emissiveIntensity: 1 })); gyro.position.set(cabX, us ? 1.98 : 1.7, 0); g.add(gyro); }
-  return shadows(g);
-}
 
 // Ouvrier : tenue choisie dans la boutique (gilet et casque). Jambes et bras articulés pour marcher et porter.
 function makeWorker(i, outfit = { vest: 0xFF8A1F, hat: 0xFFD23F }) {
@@ -180,6 +145,16 @@ export class Site {
 
 
   // Prépare le chantier d'une nouvelle maison (et repose les éléments déjà posés)
+  // Fin de construction : les chemins de terre de la parcelle deviennent des rues (offert)
+  paveRest() {
+    if (!this.dirtMesh) return false;
+    this.scene.remove(this.dirtMesh); this.dirtMesh.geometry.dispose(); this.dirtMesh = null;
+    const items = pendingStreets(this.paveLevel - 1, true);
+    this.pavedMesh = bake(items); if (!this.pavedMesh) return false;
+    this.pavedMesh.scale.y = 0.01; this.scene.add(this.pavedMesh); this.paveT = 0;
+    for (const it of items) if (it.kind === 'route' || it.kind === 'carrefour') this.puff(it.x, 0.4, it.z, 2, 0x9AA0A6);
+    return true;
+  }
   setHouse(game) {
     const { plan, house } = game;
     this.plan = plan; this.house = house; this.items = game.items; // voirie puis maison
@@ -195,6 +170,10 @@ export class Site {
     // Ville : le chantier est sur sa parcelle, le camion arrive par la rue de derrière
     const lvl = game.s.level, c = lotCenter(lvl - 1), cb = cityBounds(lvl);
     this.city.setLevel(lvl);
+    // Côtés de la parcelle pas encore goudronnés : chemins de terre, goudronnés à la fin de la construction
+    for (const k of ['dirtMesh', 'pavedMesh']) if (this[k]) { this.scene.remove(this[k]); this[k].geometry.dispose(); this[k] = null; }
+    this.dirtMesh = bake(pendingStreets(lvl - 1, false)); if (this.dirtMesh) this.scene.add(this.dirtMesh);
+    this.paveLevel = lvl;
     this.bounds = { x0: cb.x0 - c.x, x1: cb.x1 - c.x, z0: cb.z0 - c.z, z1: cb.z1 - c.z };
     // Le dézoom maximal grandit avec la ville : on peut toujours la voir en entier
     this.roadZ = -LOT / 2; this.road.position.set(0, 0.02, this.roadZ);
@@ -403,6 +382,7 @@ export class Site {
   // Entre deux livraisons, le camion avance sur la route au rythme du minuteur : on le voit approcher
   // (et chaque tape sur l'écran le fait avancer d'un coup). À la livraison, il marque l'arrêt puis repart.
   deliver(interval) {
+    this.craneT = 0; // la grue (s'il y en a une) pivote vers la palette pour décharger
     if (!this.truck || interval < 2.5) return;
     this.truckAnim = { t: 0 };
   }
@@ -538,12 +518,34 @@ export class Site {
         x = k < 0.08 ? THREE.MathUtils.lerp(50, edge, k / 0.08) : THREE.MathUtils.lerp(edge, stopX, (k - 0.08) / 0.92);
       }
       // Lissage (sauf quand il réapparaît au loin à droite)
-      const cur = this.truck.position.x;
-      this.truck.position.x = x > cur + 20 ? x : cur + (x - cur) * Math.min(1, dt * 10);
-      this.truck.rotation.y = Math.PI; // il roule vers la gauche
-      this.truckSpeed = Math.abs(this.truck.position.x - cur) / Math.max(dt, 1e-3); // pour le bruit du moteur
+      const T = this.truck, U = T.userData, cur = T.position.x;
+      T.position.x = x > cur + 20 ? x : cur + (x - cur) * Math.min(1, dt * 10);
+      T.rotation.y = Math.PI; // il roule vers la gauche
+      const moved = T.position.x - cur, speed = Math.abs(moved) / Math.max(dt, 1e-3);
+      this.truckSpeed = speed; // pour le bruit du moteur
+      // Roues qui tournent (il roule vers −x du monde, soit vers l'avant du camion)
+      if (Math.abs(moved) < 15) for (const w of U.wheels) w.piv.rotation.z -= Math.abs(moved) / w.r;
+      // Freinage : feux stop et cabine qui plonge ; départ : fumée à l'échappement
+      const prev = this.prevTruckSpeed || 0; this.prevTruckSpeed = speed;
+      if (speed < prev - dt * 40 && prev > 1.5) this.brake = 1;
+      this.brake = Math.max(0, (this.brake || 0) - dt * 2.2);
+      if (prev < 0.8 && speed > 2 && Math.abs(moved) < 15) { const e = T.localToWorld(U.exhaust.clone()); this.puff(e.x, e.y + 0.3, e.z, 4, 0x8A9097); }
+      for (const m of U.brake) m.emissiveIntensity = 0.1 + this.brake * 1.6;
+      if (U.headlights) U.headlights.emissiveIntensity = 0.15 + (this.dusk || 0) * 1.6;
       this.truckKick = Math.max(0, (this.truckKick || 0) - dt * 5);
-      this.truck.rotation.z = this.truckKick * 0.06;
+      if (U.body) U.body.rotation.z = -this.brake * 0.035 + this.truckKick * 0.05;
+      if (U.gyro) U.gyro.rotation.y += dt * 6;
+      // Grue : pivote vers la palette, descend le crochet, puis revient au-dessus du plateau
+      if (U.crane) {
+        this.craneT = (this.craneT ?? 9) + dt;
+        const c = this.craneT, k = c < 0.35 ? c / 0.35 : c < 0.7 ? 1 : c < 1.1 ? 1 - (c - 0.7) / 0.4 : 0, e = k * k * (3 - 2 * k);
+        U.crane.yaw.rotation.y = -e * Math.PI / 2; U.crane.boom.rotation.z = -0.12 + e * 0.3;
+        const drop = 1 + e * 0.7; U.crane.cable.scale.y = drop; U.crane.cable.position.y = -0.1 - drop / 2; U.crane.hook.position.y = -0.17 - drop;
+      }
+      // Chargement : les éléments de l'étape en cours ; le camion repart à vide
+      const next = game.items[s.placed], key = next ? STAGES[next.stage].key : 'fini';
+      const leaving = a && a.t > 0.45, n = leaving || game.done ? 0 : Math.max(1, Math.min(truckSlots(T), p.batch || 1));
+      setTruckLoad(T, key, n, next && next.color);
     }
     // Caméra : tourne doucement autour du chantier, monte avec la construction
     // Léger balancement automatique de la caméra, seulement tant qu'on n'a jamais tourné la vue à la main
@@ -555,6 +557,8 @@ export class Site {
     this.scene.fog.near = 45 * this.zoom; this.scene.fog.far = 110 * this.zoom;
     // Pendant la voirie, la caméra prend du recul pour voir les rues autour de la parcelle
     this.city.update();
+    // Goudronnage des derniers côtés de la parcelle (fin de construction) : la rue « pousse » du sol
+    if (this.paveT != null && this.pavedMesh) { this.paveT += dt; const t = Math.min(1, this.paveT / 0.9), e = 1 + 2.2 * Math.pow(t - 1, 3) + 1.2 * Math.pow(t - 1, 2); this.pavedMesh.scale.y = Math.max(0.01, e); if (t >= 1) { this.pavedMesh.scale.y = 1; this.paveT = null; } }
     const want = game.stage === 0 && !game.done ? Math.max(this.camDist, LOT * 1.15) : this.camDist;
     this.camBase = this.camBase ? this.camBase + (want - this.camBase) * Math.min(1, dt * 1.5) : want;
     const ty = 0.8 + this.plan.ridgeY * 0.45 * done, D = this.camBase * this.zoom;
