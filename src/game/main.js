@@ -5,6 +5,7 @@ import { Sound } from './audio.js';
 import { STAGES, UPGRADES, PERKS, COSMETICS, params, tierOf, TIER_STEP } from './rules.js';
 import { STAGE_ICONS, UP_ICONS, COIN, STAR, GEAR, CHEST } from './icons.js';
 import { encodeSave, decodeSave } from './savecode.js';
+import qrcode from './vendor/qrcode.mjs';
 import { VERSION } from './version.js';
 
 const SAVE_KEY = 'brick-it-up-save', VOL_KEY = 'brick-it-up-volume';
@@ -349,7 +350,8 @@ $('b-start').addEventListener('click', () => { sfx.unlock(); show('p-start', fal
 $('b-code').addEventListener('click', async () => {
   show('p-menu', false); disarm(); show('p-code', true); codeMsg('');
   $('t-code-out').value = 'Préparation du code…'; $('t-code-in').value = ''; codeArmed = null;
-  try { save(); $('t-code-out').value = await encodeSave(game.s); } catch { $('t-code-out').value = 'Impossible de créer le code sur cet appareil.'; }
+  $('qr').innerHTML = '';
+  try { save(); const code = await encodeSave(game.s); $('t-code-out').value = code; drawQR(code); } catch { $('t-code-out').value = 'Impossible de créer le code sur cet appareil.'; }
 });
 $('b-code-close').addEventListener('click', () => show('p-code', false));
 function codeMsg(t, cls = '') { const m = $('v-code-msg'); m.textContent = t; m.className = cls; }
@@ -370,13 +372,75 @@ $('b-code-load').addEventListener('click', async () => {
   if (codeArmed) {
     saving = false; localStorage.setItem(SAVE_KEY, JSON.stringify(codeArmed)); location.reload(); return;
   }
+  checkCode();
+});
+async function checkCode() {
   try {
     const st = await decodeSave($('t-code-in').value);
     codeArmed = st;
     codeMsg(`Construction n° ${st.level}, ${st.stars || 0} étoile${(st.stars || 0) > 1 ? 's' : ''}. Elle remplacera ta partie actuelle.`, 'good');
     $('b-code-load').classList.add('armed'); $('b-code-load').textContent = 'TOUCHE ENCORE POUR CONFIRMER';
   } catch (e) { codeMsg(e.message || 'Code invalide.', 'bad'); }
+}
+// Ouvre l'écran « Charger » avec un code reçu (QR code scanné ou lien ouvert)
+function importCode(code) {
+  show('p-menu', false); show('p-scan', false); show('p-code', true);
+  $('t-code-in').value = code; codeArmed = null; $('b-code-load').classList.remove('armed'); $('b-code-load').textContent = 'CHARGER CETTE PARTIE';
+  checkCode();
+}
+const findCode = (text) => (String(text || '').match(/BIU1-[A-Za-z0-9_-]+/) || [])[0];
+
+// ---------- QR code ----------
+// Le QR code contient un lien vers la version web avec la partie dedans :
+// l'appareil photo du téléphone ouvre le jeu dans le navigateur, et le scanner du jeu sait aussi le lire.
+const WEB_URL = 'https://nanou974.github.io/Brick-it-Up/';
+function drawQR(code) {
+  try { const q = qrcode(0, 'L'); q.addData(`${WEB_URL}#code=${code}`, 'Byte'); q.make(); $('qr').innerHTML = q.createSvgTag({ cellSize: 4, margin: 2, scalable: true }); }
+  catch { $('qr').textContent = ''; }
+}
+// Lien ouvert depuis un QR code : on propose de charger la partie (et on retire le code de l'adresse)
+{
+  const code = findCode(decodeURIComponent(location.hash));
+  if (code) { history.replaceState(null, '', location.pathname + location.search); setTimeout(() => importCode(code), 300); }
+}
+
+// ---------- Scanner (caméra) ----------
+let scan = null;
+function loadJsQR() {
+  if (window.jsQR) return Promise.resolve();
+  return new Promise((ok, ko) => { const sc = document.createElement('script'); sc.src = 'src/game/vendor/jsQR.js'; sc.onload = ok; sc.onerror = ko; document.head.appendChild(sc); });
+}
+function stopScan() {
+  if (!scan) return;
+  clearInterval(scan.timer); scan.stream?.getTracks().forEach(t => t.stop()); $('v-scan').srcObject = null; scan = null;
+}
+$('b-scan').addEventListener('click', async () => {
+  show('p-code', false); show('p-scan', true); stopScan();
+  const msg = (t) => $('v-scan-msg').textContent = t;
+  msg('Ouverture de la caméra…');
+  if (!navigator.mediaDevices?.getUserMedia) { msg('Pas de caméra disponible ici : utilise COPIER / PARTAGER et colle le code.'); return; }
+  try {
+    const [stream] = await Promise.all([navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false }), loadJsQR()]);
+    if (!$('p-scan').classList.contains('show')) { stream.getTracks().forEach(t => t.stop()); return; }
+    const v = $('v-scan'), cv = document.createElement('canvas'), cx = cv.getContext('2d', { willReadFrequently: true });
+    v.srcObject = stream; await v.play().catch(() => {});
+    scan = { stream, timer: 0 };
+    msg('Vise le QR code affiché sur l\'autre appareil.');
+    scan.timer = setInterval(() => {
+      if (!v.videoWidth) return;
+      const k = Math.min(1, 720 / Math.max(v.videoWidth, v.videoHeight)), w = cv.width = Math.round(v.videoWidth * k), h = cv.height = Math.round(v.videoHeight * k);
+      cx.drawImage(v, 0, 0, w, h);
+      const r = window.jsQR(cx.getImageData(0, 0, w, h).data, w, h, { inversionAttempts: 'attemptBoth' });
+      if (!r) return;
+      const code = findCode(r.data);
+      if (!code) { msg('Ce QR code n\'est pas une sauvegarde Brick\'it Up.'); return; }
+      stopScan(); sfx.horn?.(); importCode(code);
+    }, 180);
+  } catch (e) {
+    msg(e && e.name === 'NotAllowedError' ? 'La caméra est refusée : autorise-la dans les réglages du téléphone, ou utilise COPIER / PARTAGER.' : 'Impossible d\'ouvrir la caméra : utilise COPIER / PARTAGER et colle le code.');
+  }
 });
+$('b-scan-close').addEventListener('click', () => { stopScan(); show('p-scan', false); show('p-code', true); });
 
 // ---------- Ouvriers ----------
 // En jeu, chaque ouvrier visible libre prend un élément du stock et le porte à pied jusqu'à la maison :

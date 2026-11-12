@@ -41,4 +41,7 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- Vibration du lanceur à 100 % -->
     <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- Caméra : scanner le QR code d'une sauvegarde -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
 </manifest>

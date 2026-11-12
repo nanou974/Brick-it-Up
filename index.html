@@ -123,14 +123,26 @@
 <div class="panel" id="p-code">
   <div class="box">
     <div class="title">CODE DE SAUVEGARDE</div>
-    <p class="small">Pour retrouver ta partie sur un autre appareil : copie ce code, envoie-le-toi, puis colle-le dans « Charger un code » sur l'autre appareil.</p>
+    <p class="small">Pour retrouver ta partie sur un autre appareil : scanne le QR code, ou copie ce code et colle-le dans « Charger une partie » sur l'autre appareil.</p>
     <textarea id="t-code-out" readonly rows="3"></textarea>
+    <div id="qr"></div>
+    <p class="small qrtip">Sur l'autre appareil : scanne ce QR code avec le bouton « Scanner » du jeu, ou avec l'appareil photo (il ouvre la version web).</p>
     <div class="duo"><button class="btn" id="b-code-copy">COPIER</button><button class="btn" id="b-code-share">PARTAGER</button></div>
-    <div class="subtitle">CHARGER UN CODE</div>
+    <div class="subtitle">CHARGER UNE PARTIE</div>
+    <button class="btn" id="b-scan">SCANNER UN QR CODE</button>
     <textarea id="t-code-in" rows="3" placeholder="Colle ici un code BIU1-…"></textarea>
     <div id="v-code-msg"></div>
     <button class="btn" id="b-code-load">CHARGER CETTE PARTIE</button>
     <button class="btn big" id="b-code-close">FERMER</button>
+  </div>
+</div>
+<!-- Scanner de QR code (caméra) -->
+<div class="panel" id="p-scan">
+  <div class="box">
+    <div class="title">SCANNER</div>
+    <div id="scanview"><video id="v-scan" playsinline muted></video><div class="scanframe"></div></div>
+    <div id="v-scan-msg">Vise le QR code affiché sur l'autre appareil.</div>
+    <button class="btn big" id="b-scan-close">ANNULER</button>
   </div>
 </div>
 <!-- Mise à jour disponible (version web) -->
