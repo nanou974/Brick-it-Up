@@ -227,7 +227,7 @@ function finishHouse() {
   sfx.victory(); banner('MAISON TERMINÉE !');
   site.fireworks(3.4, () => sfx.rocket(), () => sfx.burst());
   $('v-donetxt').textContent = `${game.house.name} terminé${game.house.fem ? 'e' : ''} ! Tu gagnes une étoile.`;
-  $('v-donebonus').textContent = `Dépense tes étoiles dans la boutique (bouton ★ en haut) : améliorations pour toujours, camions, tenues, décors. Sur la prochaine maison, tu repars de zéro : pièces et améliorations.`;
+  $('v-donebonus').textContent = `Dépense tes étoiles dans la BOUTIQUE (bouton en haut) : améliorations pour toujours, camions, tenues, décors. Sur la prochaine maison, tu repars de zéro : pièces et améliorations.`;
   setTimeout(() => show('p-done', true), 3000); // on laisse le temps d'admirer le feu d'artifice
 }
 $('b-next').addEventListener('click', () => { sfx.unlock(); game.nextLevel(); show('p-done', false); setupSite(); banner(`MAISON ${game.s.level} !`); save(); });
@@ -301,7 +301,7 @@ function renderShop() {
     return `<button class="look${on ? ' on' : ''}" data-kind="${kind}" data-key="${c.key}" ${!owned && s.stars < c.cost ? 'disabled' : ''}>${swatch(kind, c)}<span class="lname">${c.name}</span><span class="lbtn">${btn}</span></button>`;
   }).join('') + '</div>').join('');
 }
-$('pill-stars').addEventListener('click', () => { sfx.unlock(); renderShop(); show('p-shop', true); });
+$('b-shop').addEventListener('click', () => { sfx.unlock(); renderShop(); show('p-shop', true); });
 $('b-shopclose').addEventListener('click', () => show('p-shop', false));
 for (const t of document.querySelectorAll('.tab')) t.addEventListener('click', () => {
   document.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x === t));

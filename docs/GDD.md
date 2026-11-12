@@ -62,7 +62,7 @@ Remises à zéro à chaque nouvelle maison, comme les crédits (seules les étoi
 | Ouvriers | +1 ouvrier (pose toutes les 6 s, un peu plus vite à chaque recrue) | ouvriers visibles sur le chantier |
 
 ## Étoiles et boutique
-Une étoile par maison terminée. Les étoiles sont une monnaie, dépensée dans la boutique (bouton ★ en haut de l'écran).
+Une étoile par maison terminée. Les étoiles sont une monnaie, dépensée dans la boutique (bouton BOUTIQUE en haut de l'écran).
 
 **Améliorations permanentes** (jamais remises à zéro) :
 | Amélioration | Effet par niveau | Prix (étoiles) |
