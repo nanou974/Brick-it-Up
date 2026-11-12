@@ -152,3 +152,8 @@ button { font-family: inherit; color: inherit; cursor: pointer; border: 0; }
 /* La barre du haut ne doit rien écraser (petits écrans) */
 #top > * { flex-shrink: 0; }
 @media (max-width: 380px) { #top { gap: 6px; } #pill-credits { min-width: 92px; } #b-shop { font-size: 16px; padding: 0 10px; } }
+
+/* Recentrer la vue (apparaît quand on l'a déplacée à deux doigts) */
+#b-center { position: absolute; right: 12px; bottom: calc(env(safe-area-inset-bottom) + 200px); z-index: 5; display: none; padding: 9px 12px; border-radius: 14px; font-size: 14px; background: var(--pill); color: #fff; box-shadow: 0 3px 0 rgba(0,0,0,0.25); }
+#b-center.show { display: block; }
+#b-center:active { transform: translateY(2px); }

@@ -1,9 +1,7 @@
-## Brick'it Up v0.7.0
+## Brick'it Up v0.7.1
 
-Télécharge l'APK ci-dessous et ouvre-le : il s'installe par-dessus la version précédente, ta partie est conservée.
+Télécharge l'APK ci-dessous et ouvre-le : il s'installe par-dessus la version précédente, ta partie est conservée. La version web (https://nanou974.github.io/Brick-it-Up/) se met à jour toute seule.
 
-## Nouveauté : version web (iPhone, iPad, PC)
-- Le jeu est jouable dans un navigateur : https://nanou974.github.io/Brick-it-Up/
-- **Sur iPhone / iPad** : ouvrir le lien dans **Safari**, bouton Partager → **« Sur l'écran d'accueil »**. Le jeu s'installe avec son icône, s'ouvre en plein écran et marche sans connexion.
-- **Mises à jour automatiques** : à l'ouverture, le jeu vérifie s'il existe une nouvelle version et la télécharge ; elle s'applique tout de suite sur l'écran titre, sinon au lancement suivant.
-- La partie web est sauvegardée dans le navigateur de l'appareil (elle est séparée de celle de l'APK Android).
+- **Déplacer la vue** : glisse avec deux doigts pour te déplacer autour du chantier (on peut pincer en même temps pour zoomer). À la souris : clic droit maintenu.
+- Bouton **RECENTRER** : il apparaît dès que la vue a été déplacée et la ramène sur le chantier.
+- La vue reste dans les environs du chantier pour qu'on ne s'y perde pas.

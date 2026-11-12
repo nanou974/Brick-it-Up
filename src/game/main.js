@@ -350,6 +350,8 @@ function workersWork() {
   while (free > 0 && game.s.stock > 0 && !game.done) { game.place(true); free--; }
 }
 
+$('b-center').addEventListener('click', () => { sfx.unlock(); site.recenter(); });
+
 // ---------- Boucle ----------
 addEventListener('resize', () => site.resize());
 let last = performance.now(), uiT = 0, saveT = 0;
@@ -361,7 +363,7 @@ function frame(now) {
   site.update(dt, game);
   truckSounds(dt);
   ring();
-  uiT -= dt; if (uiT <= 0) { uiT = 0.1; refresh(); refreshChest(); }
+  uiT -= dt; if (uiT <= 0) { uiT = 0.1; refresh(); refreshChest(); $('b-center').classList.toggle('show', site.panned); }
   saveT += dt; if (saveT > 5) { saveT = 0; save(); }
   requestAnimationFrame(frame);
 }

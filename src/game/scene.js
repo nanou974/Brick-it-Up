@@ -109,6 +109,18 @@ export class Site {
   }
 
   // Glisser horizontalement pour tourner autour du chantier
+  // Déplace la vue de (dx, dy) pixels à l'écran : la scène suit les doigts, dans le repère de la caméra
+  panBy(dx, dy) {
+    const k = this.camDist * this.zoom * 0.0022, o = this.orbit;
+    const right = new THREE.Vector3(Math.cos(o), 0, -Math.sin(o)), fwd = new THREE.Vector3(-Math.sin(o), 0, -Math.cos(o));
+    this.panTarget.addScaledVector(right, -dx * k).addScaledVector(fwd, dy * k);
+    // On reste autour du chantier (on ne se perd pas dans le décor)
+    const lim = (this.plan ? Math.max(this.plan.w, this.plan.d) : 10) * 0.8 + 6;
+    if (this.panTarget.length() > lim) this.panTarget.setLength(lim);
+  }
+  recenter() { this.panTarget.set(0, 0, 0); }
+  get panned() { return this.panTarget.length() > 0.8; }
+
   // Glisser horizontalement pour tourner autour du chantier.
   //  - seul le doigt qui a commencé le geste compte ; un deuxième doigt annule la rotation (évite les demi-tours) ;
   //  - il faut glisser de plus de 15 px avant que la vue tourne (une tape ne la fait jamais bouger) ;
@@ -118,11 +130,14 @@ export class Site {
     let lastDown = 0;
     // Zoom : pincement à deux doigts (écarter = zoomer, rapprocher = dézoomer) ou molette de la souris
     this.zoom = 1; this.zoomTarget = 1; this.pts = new Map(); this.pinch = null;
+    // Déplacement de la vue : glisser à deux doigts (ou clic droit maintenu à la souris)
+    this.pan = new THREE.Vector3(); this.panTarget = new THREE.Vector3(); this.rmb = null;
+    const mid = () => { const [a, b] = [...this.pts.values()]; return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }; };
     const pinchDist = () => { const [a, b] = [...this.pts.values()]; return Math.hypot(a.x - b.x, a.y - b.y); };
     canvas.addEventListener('pointerdown', e => {
       const now = performance.now(), rapid = now - lastDown < RAPID; lastDown = now;
       this.pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
-      if (this.pts.size === 2) this.pinch = { d0: pinchDist(), z0: this.zoomTarget, active: false };
+      if (this.pts.size === 2) { const m = mid(); this.pinch = { d0: pinchDist(), z0: this.zoomTarget, active: false, m0: m, last: m, panning: false }; }
       if (this.drag) { this.drag.locked = true; return; }               // deuxième doigt : pas de rotation
       this.drag = { id: e.pointerId, x: e.clientX, o: this.orbitTarget, moving: false, locked: rapid };
     });
@@ -130,9 +145,12 @@ export class Site {
       if (this.pts.has(e.pointerId)) this.pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
       if (this.pinch && this.pts.size === 2) {
         // On attend un vrai écartement (20 px) pour ne pas zoomer pendant des tapes rapides à deux pouces
-        const d = pinchDist();
-        if (!this.pinch.active && Math.abs(d - this.pinch.d0) > 20) { this.pinch.active = true; this.pinch.d0 = d; this.pinch.z0 = this.zoomTarget; }
-        if (this.pinch.active) this.zoomTarget = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, this.pinch.z0 * this.pinch.d0 / Math.max(10, d)));
+        const d = pinchDist(), m = mid(), P = this.pinch;
+        if (!P.active && Math.abs(d - P.d0) > 20) { P.active = true; P.d0 = d; P.z0 = this.zoomTarget; }
+        if (P.active) this.zoomTarget = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, P.z0 * P.d0 / Math.max(10, d)));
+        // Les deux doigts glissent ensemble : la vue se déplace (après 20 px, pour ignorer les tapes à deux pouces)
+        if (!P.panning && Math.hypot(m.x - P.m0.x, m.y - P.m0.y) > 20) { P.panning = true; P.last = m; }
+        if (P.panning) { this.panBy(m.x - P.last.x, m.y - P.last.y); P.last = m; }
         return;
       }
       const d = this.drag;
@@ -147,6 +165,11 @@ export class Site {
       if (this.drag && e.pointerId === this.drag.id) this.drag = null;
     };
     addEventListener('pointerup', end); addEventListener('pointercancel', end);
+    // Souris : clic droit maintenu pour déplacer la vue
+    canvas.addEventListener('contextmenu', e => e.preventDefault());
+    canvas.addEventListener('mousedown', e => { if (e.button === 2) this.rmb = { x: e.clientX, y: e.clientY }; });
+    addEventListener('mousemove', e => { if (this.rmb) { this.panBy(e.clientX - this.rmb.x, e.clientY - this.rmb.y); this.rmb = { x: e.clientX, y: e.clientY }; } });
+    addEventListener('mouseup', e => { if (e.button === 2) this.rmb = null; });
     canvas.addEventListener('wheel', e => { e.preventDefault(); this.zoomTarget = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, this.zoomTarget * (1 + Math.sign(e.deltaY) * 0.1))); }, { passive: false });
   }
 
@@ -519,8 +542,9 @@ export class Site {
     this.zoom += (this.zoomTarget - this.zoom) * Math.min(1, dt * 8);
     this.scene.fog.near = 45 * this.zoom; this.scene.fog.far = 110 * this.zoom;
     const ty = 0.8 + this.plan.ridgeY * 0.45 * done, D = this.camDist * this.zoom;
-    this.camera.position.set(Math.sin(this.orbit) * D, ty + D * 0.48, Math.cos(this.orbit) * D + 1.2);
-    this.camera.lookAt(0, ty, 0.8);
+    this.pan.lerp(this.panTarget, Math.min(1, dt * 10));
+    this.camera.position.set(Math.sin(this.orbit) * D + this.pan.x, ty + D * 0.48, Math.cos(this.orbit) * D + 1.2 + this.pan.z);
+    this.camera.lookAt(this.pan.x, ty, 0.8 + this.pan.z);
     this.renderer.render(this.scene, this.camera);
   }
 }
