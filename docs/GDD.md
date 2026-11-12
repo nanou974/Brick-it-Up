@@ -26,8 +26,23 @@ Chaque construction terminée reste en place : elles forment une ville qui grand
 - Les constructions terminées sont affichées en version simplifiée et fusionnée (une par image au chargement) pour que la ville reste fluide.
 - On peut dézoomer et glisser à deux doigts pour voir toute la ville.
 
-## Maisons
-20 maisons, toutes différentes par leur forme (catalogue dans `src/game/houses.js`). La 20e est toujours le château.
+## Constructions
+30 constructions, toutes différentes (catalogue dans `src/game/houses.js`) : 19 maisons, 10 bâtiments publics et le château, toujours le dernier.
+
+| N° | Bâtiment public | Ce qui le distingue |
+| --- | --- | --- |
+| 4 | Boulangerie | vitrines avec pains, store rayé, enseigne, terrasse de café |
+| 7 | Bureau de poste | enseigne jaune, boîte aux lettres jaune, fourgon de La Poste |
+| 10 | École | horloge sur fronton, cour avec marelle et paniers de basket, grille |
+| 13 | Caserne de pompiers | portes rouges, tour de séchage des tuyaux, camion de pompiers |
+| 16 | Mairie | colonnade avec fronton et horloge, marches, drapeaux français et européen |
+| 19 | Église | clocher avec flèche et croix, rosace, vitraux, ifs |
+| 22 | Gare | quai couvert, voie ferrée, train, bancs, horloge |
+| 24 | Supermarché | grande enseigne, parking avec voitures, chariots |
+| 26 | Hôpital | deux ailes, croix verte lumineuse, hélistation sur le toit, ambulance |
+| 28 | Usine | toit en dents de scie, cheminées qui fument, citerne, palettes |
+
+Aux tours suivants (constructions 31 et plus), on recommence la liste avec des variantes (couleurs, matériaux, taille, ajouts) et des étoiles dans le nom.
 Chaque maison combine : un ou plusieurs volumes (plan en L, garage, grange, volumes décalés), un type de toit
 (2 pans, 2 pans très pentus, 4 pans, une pente, plat, créneaux), un mur (brique, pierre, bois, crépi, colombages, soubassement),
 des fenêtres (classiques, peu nombreuses, nombreuses, baies vitrées), des volets ou non, et des ajouts.
@@ -92,4 +107,4 @@ Le bouton du coffre (en bas à gauche) affiche le compte à rebours, puis « OUV
 Contenu tiré à l'ouverture : entre 60 % et 90 % du prix moyen des 5 améliorations à ce moment-là (jamais plus de 90 %).
 
 ## Durée (simulation, joueur actif)
-Cabanon ≈ 6 min, puis de plus en plus long jusqu'au Château ≈ 21 min sans boutique, ≈ 16 min en dépensant ses étoiles (3 h 30 à 4 h 15 pour les 20 maisons).
+En dépensant ses étoiles (`PERKS=1 LEVELS=30 node tools/sim.mjs`) : Cabanon ≈ 6,5 min, puis 7 à 15 min par construction (les plus longues : Église et Ferme ≈ 15 min, Château ≈ 12 min), environ 5 h pour les 30 constructions.

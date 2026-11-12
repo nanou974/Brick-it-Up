@@ -195,7 +195,7 @@ function refresh(force = false) {
   const s = game.s, p = game.p;
   $('v-credits').textContent = fmt(s.credits);
   $('v-stars').textContent = s.stars;
-  $('v-level').textContent = `MAISON ${s.level}`;
+  $('v-level').textContent = `${kindLabel()} ${s.level}`;
   $('v-house').textContent = game.house.name;
   const k = game.stage, [a, b] = game.stageProgress(), S = STAGES[k];
   $('v-stage').textContent = `${S.name.toUpperCase()} · ${Math.floor(100 * s.placed / game.items.length)} %`;
@@ -219,18 +219,20 @@ function ring() {
 }
 
 // ---------- Fin de maison ----------
+// « MAISON » ou « BÂTIMENT » (bâtiments publics : mairie, école, gare…)
+const kindLabel = () => game.house.pub ? 'BÂTIMENT' : 'MAISON';
 // On attend que les ouvriers aient déposé leurs derniers éléments
 function finishWhenReady() { if (site.busy()) setTimeout(finishWhenReady, 300); else finishHouse(); }
 function finishHouse() {
   if (!game.done) return;
   // Klaxon de victoire et feux d'artifice au-dessus de la maison
-  sfx.victory(); banner('MAISON TERMINÉE !');
+  sfx.victory(); banner(game.house.pub ? 'BÂTIMENT TERMINÉ !' : 'MAISON TERMINÉE !');
   site.fireworks(3.4, () => sfx.rocket(), () => sfx.burst());
   $('v-donetxt').textContent = `${game.house.name} terminé${game.house.fem ? 'e' : ''} ! Tu gagnes une étoile.`;
-  $('v-donebonus').textContent = `Dépense tes étoiles dans la BOUTIQUE (bouton en haut) : améliorations pour toujours, camions, tenues, décors. Sur la prochaine maison, tu repars de zéro : pièces et améliorations.`;
+  $('v-donebonus').textContent = `Dépense tes étoiles dans la BOUTIQUE (bouton en haut) : améliorations pour toujours, camions, tenues, décors. Sur la prochaine construction, tu repars de zéro : pièces et améliorations.`;
   setTimeout(() => show('p-done', true), 3000); // on laisse le temps d'admirer le feu d'artifice
 }
-$('b-next').addEventListener('click', () => { sfx.unlock(); game.nextLevel(); show('p-done', false); setupSite(); banner(`MAISON ${game.s.level} !`); save(); });
+$('b-next').addEventListener('click', () => { sfx.unlock(); game.nextLevel(); show('p-done', false); setupSite(); banner(`${kindLabel()} ${game.s.level} : ${game.house.name.toUpperCase()} !`); save(); });
 
 // ---------- Coffre du chantier ----------
 // Un coffre toutes les 20 minutes (en temps réel). Son contenu est tiré à l'ouverture.

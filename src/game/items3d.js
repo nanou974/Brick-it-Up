@@ -289,6 +289,216 @@ export function makeItem(it) {
       { const plant = new THREE.Mesh(new THREE.IcosahedronGeometry(0.35, 0), mat(LEAF)); plant.position.set(0, 0.45, 0); g.add(plant); }
       break;
     }
+    // ---------- Bâtiments publics ----------
+    case 'vitrine': {
+      g.add(box(it.vw, it.vh, 0.06, glassM(), 0, 0, 0));
+      g.add(box(it.vw + 0.16, 0.12, 0.12, mat(DARKWOOD), 0, -it.vh / 2 - 0.06, 0.02)); g.add(box(it.vw + 0.16, 0.1, 0.1, mat(DARKWOOD), 0, it.vh / 2 + 0.05, 0.02));
+      for (const sx of [-1, 0, 1]) g.add(box(0.08, it.vh, 0.1, mat(DARKWOOD), sx * it.vw / 2, 0, 0.02));
+      for (let k = 0; k < 3; k++) { const b = new THREE.Mesh(new THREE.CapsuleGeometry(0.07, 0.45, 3, 6), mat(0xD9A44A)); b.rotation.z = Math.PI / 2 - 0.3 + k * 0.3; b.position.set(-0.4 + k * 0.4, -it.vh / 2 + 0.25, -0.08); g.add(b); }
+      break;
+    }
+    case 'store': { // store rayé
+      const n = Math.max(4, Math.round(it.aw / 0.5)), sw = it.aw / n;
+      for (let k = 0; k < n; k++) { const b = box(sw, 0.06, 1.1, mat(k % 2 ? it.c2 : it.c1), -it.aw / 2 + (k + 0.5) * sw, 0, 0); b.rotation.x = 0.38; g.add(b); }
+      for (let k = 0; k < n; k++) g.add(box(sw, 0.22, 0.04, mat(k % 2 ? it.c2 : it.c1), -it.aw / 2 + (k + 0.5) * sw, -0.32, 0.53));
+      break;
+    }
+    case 'enseigne': {
+      const eh = it.eh || 0.6, W = it.ew;
+      g.add(box(W, eh, 0.1, mat(c), 0, 0, 0)); g.add(box(W + 0.12, eh + 0.12, 0.06, mat(shade(c, -0.18)), 0, 0, -0.03));
+      const fg = 0.06;
+      if (it.motif === 'pain') {
+        for (let k = 0; k < 3; k++) { const b = new THREE.Mesh(new THREE.CapsuleGeometry(0.11, 0.55, 3, 8), mat(0xE8B04A)); b.rotation.z = Math.PI / 2; b.position.set(-0.9 + k * 0.9, 0, fg); g.add(b); }
+      } else if (it.motif === 'poste') {
+        g.add(box(0.9, 0.42, 0.04, mat(0x2F4FA8), -W / 2 + 0.7, 0, fg)); g.add(beam([-W / 2 + 0.3, 0.18, fg + 0.02], [-W / 2 + 0.7, -0.03, fg + 0.02], 0.05, mat(0xFFE27A))); g.add(beam([-W / 2 + 0.7, -0.03, fg + 0.02], [-W / 2 + 1.1, 0.18, fg + 0.02], 0.05, mat(0xFFE27A)));
+        for (let k = 0; k < 4; k++) g.add(box(0.32, 0.36, 0.04, mat(0x2F4FA8), -W / 2 + 1.6 + k * 0.45, 0, fg));
+      } else {
+        const lw = it.motif === 'super' ? 0.5 : 0.35, n = Math.floor((W - 0.6) / (lw + 0.12));
+        for (let k = 0; k < n; k++) g.add(box(lw, eh * 0.55, 0.04, mat(WHITE), -W / 2 + 0.3 + lw / 2 + k * (lw + 0.12), 0, fg));
+      }
+      break;
+    }
+    case 'table-cafe': {
+      g.add(cyl(0.45, 0.45, 0.06, 12, mat(WHITE), 0, 0.75, 0)); g.add(cyl(0.04, 0.04, 0.75, 6, mat(METAL), 0, 0.37, 0));
+      for (const a of [0, Math.PI]) { const ch = new THREE.Group(); ch.add(box(0.4, 0.05, 0.4, mat(METAL), 0, 0.45, 0)); ch.add(box(0.4, 0.45, 0.05, mat(METAL), 0, 0.68, -0.2)); ch.position.set(Math.sin(a) * 0.75, 0, Math.cos(a) * 0.75); ch.rotation.y = a + Math.PI; g.add(ch); }
+      g.add(cyl(0.03, 0.03, 2.3, 6, mat(WHITE), 0, 1.15, 0));
+      const p = new THREE.Mesh(new THREE.ConeGeometry(1.3, 0.55, 8), mat(c)); p.position.y = 2.35; g.add(p);
+      break;
+    }
+    case 'boite-poste': {
+      g.add(box(0.12, 0.7, 0.12, mat(METAL), 0, 0.35, 0));
+      g.add(box(0.6, 0.75, 0.45, mat(0xFFC531), 0, 1.05, 0)); { const t = cyl(0.3, 0.3, 0.45, 12, mat(0xFFC531), 0, 1.42, 0); t.rotation.x = Math.PI / 2; g.add(t); }
+      g.add(box(0.36, 0.05, 0.04, mat(METAL), 0, 1.3, 0.24)); g.add(box(0.3, 0.2, 0.02, mat(0x2F4FA8), 0, 0.95, 0.235));
+      break;
+    }
+    case 'vehicule': { // véhicule dans l'axe x : fourgon, voiture, camion de pompiers, ambulance
+      const T = it.type, dark = mat(0x23272C), wheel = (x, z, r = 0.32) => { const w = cyl(r, r, 0.24, 12, dark, x, r, z); w.rotation.x = Math.PI / 2; g.add(w); };
+      if (T === 'voiture') {
+        g.add(box(2.6, 0.55, 1.3, mat(c), 0, 0.55, 0)); g.add(box(1.4, 0.5, 1.15, mat(c), -0.1, 1.07, 0));
+        g.add(box(1.25, 0.38, 1.18, glassM(), -0.1, 1.07, 0));
+        for (const x of [-0.85, 0.85]) for (const z of [-0.62, 0.62]) wheel(x, z, 0.28);
+      } else if (T === 'pompier') {
+        g.add(box(4.6, 1.3, 1.7, mat(c), -0.4, 1.05, 0)); g.add(box(1.4, 1.5, 1.7, mat(c), 2.4, 1.15, 0));
+        g.add(box(0.06, 0.6, 1.5, glassM(), 3.11, 1.45, 0)); g.add(box(4.4, 0.08, 1.2, mat(0xBFC4C9), -0.5, 1.75, 0));
+        for (let k = 0; k < 5; k++) g.add(box(0.06, 0.06, 0.9, mat(0xDADDE0), -2.2 + k * 0.7, 1.95, 0));
+        for (const z of [-0.4, 0.4]) g.add(box(3.6, 0.06, 0.06, mat(0xDADDE0), -0.8, 1.95, z));
+        g.add(box(0.5, 0.15, 0.3, mat(0x2F6FD1, { emissive: 0x1C4CC0, emissiveIntensity: 0.6 }), 2.4, 1.98, 0));
+        g.add(box(4.6, 0.1, 1.72, mat(WHITE), -0.4, 0.75, 0));
+        for (const x of [-2, -0.8, 2.2]) for (const z of [-0.8, 0.8]) wheel(x, z, 0.4);
+      } else {
+        const amb = T === 'ambulance';
+        g.add(box(3.2, 1.5, 1.6, mat(c), -0.3, 1.1, 0)); g.add(box(1.1, 1.1, 1.6, mat(c), 1.85, 0.9, 0));
+        g.add(box(0.06, 0.5, 1.4, glassM(), 2.41, 1.15, 0));
+        if (amb) {
+          g.add(box(3.2, 0.25, 1.62, mat(0x2E9E4F), -0.3, 0.95, 0));
+          for (const z of [-0.81, 0.81]) { g.add(box(0.6, 0.18, 0.02, mat(0x2E9E4F), -0.4, 1.45, z)); g.add(box(0.18, 0.6, 0.02, mat(0x2E9E4F), -0.4, 1.45, z)); }
+          g.add(box(0.5, 0.15, 0.3, mat(0x2F6FD1, { emissive: 0x1C4CC0, emissiveIntensity: 0.6 }), 1.0, 1.92, 0));
+        } else for (const z of [-0.81, 0.81]) g.add(box(1.4, 0.35, 0.02, mat(0x2F4FA8), -0.3, 1.2, z));
+        for (const x of [-1.2, 1.5]) for (const z of [-0.72, 0.72]) wheel(x, z);
+      }
+      break;
+    }
+    case 'horloge': { // petit fronton avec horloge
+      const m = mat(c);
+      for (const s of [-1, 1]) { const b = box(1.5, 0.3, 0.5, m, s * 0.55, 0.55, 0); b.rotation.z = -s * 0.6; g.add(b); }
+      g.add(box(1.9, 0.9, 0.45, m, 0, 0.3, -0.02));
+      const face = cyl(0.42, 0.42, 0.06, 20, mat(WHITE), 0, 0.5, 0.25); face.rotation.x = Math.PI / 2; g.add(face);
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(0.43, 0.05, 6, 20), mat(0x22262B)); ring.position.set(0, 0.5, 0.27); g.add(ring);
+      g.add(box(0.05, 0.3, 0.03, mat(0x22262B), 0, 0.62, 0.3)); { const h = box(0.04, 0.22, 0.03, mat(0x22262B), 0.08, 0.46, 0.3); h.rotation.z = -2.1; g.add(h); }
+      break;
+    }
+    case 'cour': {
+      g.add(box(it.cw, 0.04, it.cd, mat(0x7E848B, { roughness: 1 })));
+      const white = mat(0xF2F2EC), yel = mat(0xFFD23F);
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(1, 0.05, 4, 24), white); ring.rotation.x = Math.PI / 2; ring.position.y = 0.03; g.add(ring);
+      g.add(box(0.08, 0.012, it.cd * 0.95, white, 0, 0.025, 0));
+      for (let k = 0; k < 6; k++) g.add(box(0.6, 0.012, 0.6, k % 2 ? yel : white, -it.cw / 2 + 2.4 + [0, 0, 0.35, -0.35, 0.35, -0.35][k], 0.025, -it.cd / 2 + 0.6 + [0, 1, 2, 2, 3, 3][k] * 0.75));
+      break;
+    }
+    case 'panier': {
+      g.add(cyl(0.07, 0.09, 3, 8, mat(0x3E4248), 0, 1.5, -0.35));
+      g.add(box(1.1, 0.75, 0.06, mat(WHITE), 0, 3, -0.3)); g.add(box(0.45, 0.32, 0.07, mat(0xE5383B), 0, 2.88, -0.29));
+      const r = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.03, 6, 14), mat(0xF2730C)); r.rotation.x = Math.PI / 2; r.position.set(0, 2.72, -0.02); g.add(r);
+      break;
+    }
+    case 'porte-rouge': {
+      g.add(box(it.pw, it.ph, 0.08, mat(0xD62828)));
+      for (let k = 1; k < 4; k++) g.add(box(it.pw * 0.96, 0.04, 0.1, mat(0xA51E1E), 0, -it.ph / 2 + k * it.ph / 4, 0));
+      for (let k = 0; k < 3; k++) g.add(box(it.pw * 0.25, 0.25, 0.1, glassM(), -it.pw * 0.3 + k * it.pw * 0.3, it.ph * 0.3, 0));
+      g.add(box(it.pw + 0.2, 0.12, 0.14, mat(WHITE), 0, it.ph / 2 + 0.06, 0));
+      break;
+    }
+    case 'colonnade': { // portique : colonnes, entablement, fronton avec horloge
+      const m = mat(c), W = it.cw, Hh = it.ch, n = 4;
+      g.add(box(W + 0.6, 0.25, 2, m, 0, 0.12, -0.2));
+      for (let k = 0; k < n; k++) { const x = -W / 2 + 0.3 + k * (W - 0.6) / (n - 1); g.add(cyl(0.22, 0.26, Hh - 0.6, 10, mat(WHITE), x, (Hh - 0.6) / 2 + 0.25, 0.3)); g.add(box(0.6, 0.15, 0.6, mat(WHITE), x, Hh - 0.28, 0.3)); }
+      g.add(box(W + 0.4, 0.45, 2.1, m, 0, Hh, -0.2));
+      for (const s of [-1, 1]) { const b = box(W / 2 + 0.6, 0.2, 2.1, mat(it.roof), s * W / 4, Hh + 0.62, -0.2); b.rotation.z = -s * 0.32; g.add(b); }
+      { const tri = new THREE.Shape(); tri.moveTo(-W / 2, 0); tri.lineTo(W / 2, 0); tri.lineTo(0, W * 0.16); tri.lineTo(-W / 2, 0); const tg = new THREE.Mesh(new THREE.ExtrudeGeometry(tri, { depth: 0.2, bevelEnabled: false }), m); tg.position.set(0, Hh + 0.22, 0.6); g.add(tg); }
+      const face = cyl(0.32, 0.32, 0.05, 18, mat(WHITE), 0, Hh + 0.55, 0.83); face.rotation.x = Math.PI / 2; g.add(face);
+      g.add(box(0.04, 0.24, 0.03, mat(0x22262B), 0, Hh + 0.63, 0.87)); { const h = box(0.04, 0.18, 0.03, mat(0x22262B), 0.06, Hh + 0.52, 0.87); h.rotation.z = -2.1; g.add(h); }
+      break;
+    }
+    case 'marches': for (let k = 0; k < 3; k++) g.add(box(it.mw - k * 0.3, 0.15, 0.5, mat(0xD6D2C4), 0, 0.075 + k * 0.15, -k * 0.4)); break;
+    case 'mat-drapeau': {
+      g.add(cyl(0.05, 0.06, 5.6, 8, mat(0xDADDE0), 0, 2.8, 0)); g.add(new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 6), mat(0xE8C24A)).translateY(5.65));
+      if (it.flag === 'fr') [0x2F4FA8, WHITE, 0xE5383B].forEach((col, k) => g.add(box(0.4, 0.8, 0.03, mat(col), 0.25 + k * 0.4, 5.1, 0)));
+      else { g.add(box(1.2, 0.8, 0.03, mat(0x23409A), 0.65, 5.1, 0)); for (let k = 0; k < 8; k++) { const a = k / 8 * Math.PI * 2; g.add(box(0.07, 0.07, 0.04, mat(0xFFD23F), 0.65 + Math.cos(a) * 0.24, 5.1 + Math.sin(a) * 0.24, 0)); } }
+      break;
+    }
+    case 'fleche': { // flèche du clocher et croix
+      const cn = new THREE.Mesh(new THREE.ConeGeometry(it.r * 1.05, it.h, 8), mat(c)); cn.rotation.y = Math.PI / 8; cn.position.y = it.h / 2; g.add(cn);
+      g.add(box(it.r * 2.1, 0.3, it.r * 2.1, mat(0xB8B2A6), 0, 0.1, 0));
+      g.add(box(0.1, 1, 0.1, mat(0xE8C24A), 0, it.h + 0.45, 0)); g.add(box(0.55, 0.1, 0.1, mat(0xE8C24A), 0, it.h + 0.65, 0));
+      break;
+    }
+    case 'vitrail': {
+      const cols = [0xE5383B, 0x2F6FD1, 0xFFD23F, 0x2E9E4F, 0x7B4FD1], gl = (col) => mat(col, { emissive: col, emissiveIntensity: 0.25, roughness: 0.3 });
+      for (let k = 0; k < 6; k++) g.add(box(0.25, 0.42, 0.05, gl(cols[k % 5]), (k % 2 - 0.5) * 0.27, -0.55 + Math.floor(k / 2) * 0.45, 0));
+      const top = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.28, 0.05, 12, 1, false, 0, Math.PI), gl(0x2F6FD1)); top.rotation.set(Math.PI / 2, 0, -Math.PI / 2); top.position.set(0, 0.36, 0); g.add(top);
+      g.add(box(0.7, 0.1, 0.1, mat(0xD6D2C4), 0, -0.82, 0.02));
+      break;
+    }
+    case 'rosace': {
+      const cols = [0xE5383B, 0x2F6FD1, 0xFFD23F, 0x2E9E4F, 0x7B4FD1, 0xF2730C];
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(0.75, 0.1, 6, 24), mat(0xD6D2C4)); g.add(ring);
+      for (let k = 0; k < 6; k++) { const s = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.7, 0.05, 6, 1, false, k * Math.PI / 3, Math.PI / 3), mat(cols[k], { emissive: cols[k], emissiveIntensity: 0.25 })); s.rotation.x = Math.PI / 2; g.add(s); }
+      { const m2 = cyl(0.22, 0.22, 0.07, 12, mat(0xFFD23F, { emissive: 0xFFD23F, emissiveIntensity: 0.3 }), 0, 0, 0.01); m2.rotation.x = Math.PI / 2; g.add(m2); }
+      break;
+    }
+    case 'if': g.add(cyl(0.12, 0.15, 0.5, 6, mat(0x7A5230), 0, 0.25, 0)); { const cn = new THREE.Mesh(new THREE.ConeGeometry(0.55, 2.6, 8), mat(0x2F5E3A)); cn.position.y = 1.7; g.add(cn); } break;
+    case 'quai': { // quai couvert : dalle, poteaux, marquise
+      g.add(box(it.qw, 0.5, it.qd, mat(0xBDB6A8), 0, 0.25, 0)); g.add(box(it.qw, 0.04, 0.25, mat(0xFFD23F), 0, 0.52, it.qd / 2 - 0.2));
+      const n = Math.max(3, Math.round(it.qw / 3.5));
+      for (let k = 0; k < n; k++) g.add(cyl(0.08, 0.08, 2.8, 8, mat(0x2F6E52), -it.qw / 2 + 1 + k * (it.qw - 2) / (n - 1), 1.9, 0));
+      { const r = box(it.qw + 0.4, 0.1, it.qd + 0.4, mat(0x2F6E52), 0, 3.35, 0.1); r.rotation.x = -0.08; g.add(r); }
+      { const r = box(it.qw + 0.2, 0.06, it.qd * 0.6, glassT(), 0, 3.42, 0.2); r.rotation.x = -0.08; g.add(r); }
+      break;
+    }
+    case 'rails': {
+      g.add(box(it.rw, 0.2, 2.6, mat(0x8A847A, { roughness: 1 }), 0, 0.1, 0));
+      for (let k = 0; k < Math.floor(it.rw / 0.8); k++) g.add(box(0.25, 0.08, 2, mat(0x6E4A2C), -it.rw / 2 + 0.4 + k * 0.8, 0.24, 0));
+      for (const z of [-0.72, 0.72]) g.add(box(it.rw, 0.12, 0.1, mat(0x9EA4AA, { metalness: 0.4 }), 0, 0.33, z));
+      break;
+    }
+    case 'train': { // locomotive et deux voitures, dans l'axe x
+      const car = (x, col, loco) => {
+        g.add(box(loco ? 3.6 : 4.2, 1.9, 1.9, mat(col), x, 1.35, 0)); g.add(box(loco ? 3.6 : 4.2, 0.18, 2, mat(0x5B6168), x, 2.36, 0));
+        g.add(box(loco ? 3.6 : 4.2, 0.18, 1.94, mat(WHITE), x, 1.1, 0));
+        if (!loco) for (let k = 0; k < 4; k++) for (const z of [-0.96, 0.96]) g.add(box(0.7, 0.55, 0.04, glassM(), x - 1.5 + k * 1, 1.7, z));
+        else { for (const z of [-0.96, 0.96]) g.add(box(0.9, 0.6, 0.04, glassM(), x + 1, 1.75, z)); g.add(box(0.06, 0.6, 1.4, glassM(), x + 1.82, 1.75, 0)); }
+        for (const dx of [-1.3, 1.3]) for (const z of [-0.75, 0.75]) { const w = cyl(0.32, 0.32, 0.15, 12, mat(0x23272C), x + dx, 0.32, z); w.rotation.x = Math.PI / 2; g.add(w); }
+      };
+      car(4.6, 0xE5383B, true); car(0.2, 0x2F6FD1); car(-4.3, 0x2F6FD1);
+      break;
+    }
+    case 'banc': g.add(box(1.4, 0.08, 0.45, mat(WOOD), 0, 0, 0)); g.add(box(1.4, 0.35, 0.06, mat(WOOD), 0, 0.22, -0.2)); for (const s of [-1, 1]) g.add(box(0.06, 0.45, 0.4, mat(METAL), s * 0.6, -0.2, 0)); break;
+    case 'parking': {
+      g.add(box(it.pw, 0.04, it.pd, mat(0x4B4F55, { roughness: 1 })));
+      const white = mat(0xF2F2EC), n = Math.floor(it.pw / 2.6);
+      for (let k = 0; k <= n; k++) g.add(box(0.08, 0.012, 2.4, white, -it.pw / 2 + 0.2 + k * (it.pw - 0.4) / n, 0.025, -it.pd / 2 + 1.5));
+      for (let k = 0; k <= n; k++) g.add(box(0.08, 0.012, 2.4, white, -it.pw / 2 + 0.2 + k * (it.pw - 0.4) / n, 0.025, it.pd / 2 - 1.5));
+      break;
+    }
+    case 'chariots': for (let k = 0; k < 4; k++) {
+      const x = k * 0.32, m2 = mat(0xB8BEC4, { metalness: 0.3 });
+      g.add(box(0.5, 0.42, 0.04, m2, x, 0.75, -0.35)); g.add(box(0.5, 0.42, 0.04, m2, x, 0.75, 0.3)); g.add(box(0.04, 0.42, 0.65, m2, x - 0.25, 0.75, 0)); g.add(box(0.04, 0.42, 0.65, m2, x + 0.25, 0.75, 0));
+      g.add(box(0.5, 0.05, 0.08, mat(0xE5383B), x, 1.05, 0.42)); for (const z of [-0.3, 0.3]) g.add(cyl(0.06, 0.06, 0.05, 8, mat(0x23272C), x, 0.06, z).rotateZ(Math.PI / 2));
+      g.add(box(0.04, 0.5, 0.04, m2, x, 0.3, 0));
+    } break;
+    case 'croix-verte': {
+      const gr = mat(0x2E9E4F, { emissive: 0x1E8A3F, emissiveIntensity: 0.6 });
+      g.add(box(1.6, 1.6, 0.12, mat(WHITE), 0, 0, -0.04)); g.add(box(1.2, 0.4, 0.12, gr)); g.add(box(0.4, 1.2, 0.12, gr));
+      for (const s of [-1, 1]) g.add(box(0.08, 1.4, 0.08, mat(METAL), s * 0.6, -1.4, -0.1));
+      break;
+    }
+    case 'helipad': {
+      g.add(cyl(it.r, it.r, 0.05, 24, mat(0x4B4F55))); { const r = new THREE.Mesh(new THREE.TorusGeometry(it.r * 0.82, 0.06, 4, 28), mat(0xFFD23F)); r.rotation.x = Math.PI / 2; r.position.y = 0.04; g.add(r); }
+      const wm = mat(WHITE); g.add(box(0.18, 0.02, 1.4, wm, -0.45, 0.04, 0)); g.add(box(0.18, 0.02, 1.4, wm, 0.45, 0.04, 0)); g.add(box(0.75, 0.02, 0.18, wm, 0, 0.04, 0));
+      break;
+    }
+    case 'shed': { // toit en dents de scie : pan incliné et verrière verticale (côté verrière vers -z avant rotation)
+      const hh = 1.5, sl = Math.hypot(it.sd, hh), a = Math.atan2(hh, it.sd);
+      const p = box(it.sw, 0.12, sl, mat(0x5B6168), 0, hh / 2, 0); p.rotation.x = a; g.add(p);
+      g.add(box(it.sw, hh, 0.06, glassM(), 0, hh / 2, -it.sd / 2));
+      for (let k = 1; k < Math.floor(it.sw / 1.5); k++) g.add(box(0.08, hh, 0.1, mat(0x3E4248), -it.sw / 2 + k * 1.5, hh / 2, -it.sd / 2));
+      for (const s of [-1, 1]) { const tri = new THREE.Shape(); tri.moveTo(-it.sd / 2, 0); tri.lineTo(it.sd / 2, 0); tri.lineTo(-it.sd / 2, hh); const tg = new THREE.Mesh(new THREE.ExtrudeGeometry(tri, { depth: 0.1, bevelEnabled: false }), mat(0x8E9196)); tg.rotation.y = -Math.PI / 2; tg.position.set(s * it.sw / 2 + (s > 0 ? 0.1 : 0), 0, 0); g.add(tg); }
+      break;
+    }
+    case 'cheminee-usine': {
+      g.add(cyl(0.55, 0.85, it.h, 12, mat(0xA0452B), 0, it.h / 2, 0));
+      for (let k = 1; k < 4; k++) g.add(cyl(0.6 + 0.06 * (4 - k), 0.6 + 0.06 * (4 - k), 0.18, 12, mat(0xE8E2D6), 0, it.h * k / 4 + 0.6, 0));
+      g.add(cyl(0.7, 0.62, 0.35, 12, mat(0x3E4248), 0, it.h, 0));
+      for (let k = 0; k < 4; k++) { const p = new THREE.Mesh(new THREE.IcosahedronGeometry(0.5 + k * 0.22, 0), mat(0xDADDE0, { transparent: true, opacity: 0.85 - k * 0.15 })); p.position.set(0.3 + k * 0.45, it.h + 0.7 + k * 0.6, -k * 0.2); g.add(p); }
+      break;
+    }
+    case 'citerne': {
+      for (const [x, z] of [[-0.8, -0.8], [0.8, -0.8], [-0.8, 0.8], [0.8, 0.8]]) g.add(box(0.12, 2.4, 0.12, mat(METAL), x, 1.2, z));
+      g.add(cyl(1.25, 1.25, 2, 14, mat(0xDADDE0, { metalness: 0.3 }), 0, 3.4, 0)); { const d = new THREE.Mesh(new THREE.SphereGeometry(1.25, 14, 6, 0, Math.PI * 2, 0, Math.PI / 2), mat(0xDADDE0, { metalness: 0.3 })); d.position.y = 4.4; d.scale.y = 0.4; g.add(d); }
+      g.add(box(2.6, 0.3, 0.04, mat(0x2F6FD1), 0, 3.4, 1.26));
+      break;
+    }
+    case 'palette-stock': for (let k = 0; k < it.n; k++) { g.add(box(1.1, 0.14, 1.1, mat(WOOD), 0, 0.07 + k * 0.62, 0)); g.add(box(0.95, 0.45, 0.95, mat(k % 2 ? 0xC8A06A : 0xB48C58), 0, 0.37 + k * 0.62, 0)); } break;
     case 'lucarne': {
       const wm = mat(c);
       g.add(box(1.0, 1.0, 1.3, wm, 0, 0.35, -0.3));

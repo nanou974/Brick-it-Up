@@ -286,6 +286,49 @@ function features(H, m, M) {
         f('colombage', -w / 2 - 0.03, FOUND_H, 0, { cw: d, ch: top - FOUND_H, ry: -Math.PI / 2 });
         break;
       }
+      // ---------- Bâtiments publics ----------
+      case 'vitrine': for (const sx of [-1, 1]) f('vitrine', doorX + sx * 1.9, FOUND_H + 0.85, front + 0.26, { vw: 1.7, vh: 1.5 }); break;
+      case 'store': f('store', doorX, FOUND_H + 1.95, front + 0.62, { aw: w - 0.6, c1: 0xE5383B, c2: 0xF7F7F2 }); break;
+      case 'enseigne-pain': f('enseigne', doorX, FOUND_H + 2.45, front + 0.26, { ew: 3, motif: 'pain', color: 0x7A3B22 }); break;
+      case 'enseigne-poste': f('enseigne', doorX, wallTop - 0.55, front + 0.26, { ew: 3.4, motif: 'poste', color: 0xFFC531 }); break;
+      case 'enseigne-pompiers': f('enseigne', doorX, wallTop - 0.55, front + 0.26, { ew: 4, motif: 'pompiers', color: 0xD62828 }); break;
+      case 'enseigne-super': f('enseigne', 0, wallTop + 0.55, front + 0.1, { ew: Math.min(7, w - 2), eh: 1.1, motif: 'super', color: 0xE5383B }); break;
+      case 'terrasse-cafe': f('table-cafe', -w / 2 - 1.3, 0, front + 1.2, { color: 0xE5383B }); f('table-cafe', w / 2 + 1.3, 0, front + 1.2, { color: 0x2F6FD1 }); break;
+      case 'boite-poste': f('boite-poste', doorX + 1.7, 0, front + 1.5); break;
+      case 'fourgon-poste': f('vehicule', w / 2 + 2.2, 0, front + 2.6, { type: 'van', color: 0xFFC531, ry: Math.PI / 2 }); break;
+      case 'horloge': f('horloge', doorX, wallTop + 0.05, front + 0.3, { color: shade(H.wall.color, 0.08) }); break;
+      case 'cour': {
+        f('cour', 0, 0.03, front + 3.6, { cw: w + 1, cd: 5 });
+        f('panier', -w / 2 + 0.1, 0, front + 3.6, { ry: Math.PI / 2 }); f('panier', w / 2 - 0.1, 0, front + 3.6, { ry: -Math.PI / 2 });
+        f('grille', doorX, 0, front + 6.4, { gw: 3 }); for (const sx of [-1, 1]) for (let k = 1; k <= Math.floor(w / 3); k++) f('cloture', doorX + sx * (1.5 + k * 1.5 - 0.75), 0, front + 6.4, { len: 1.5, iron: true });
+        break;
+      }
+      case 'arbres-cour': f('arbre-rue', -w / 2 - 1.6, 0, front + 1.5); f('arbre-rue', w / 2 + 1.6, 0, front + 1.5); break;
+      case 'portes-rouges': for (const sx of [-1, 1]) f('porte-rouge', doorX + sx * 3, FOUND_H + 0.85, front + 0.25, { pw: 2.4, ph: 1.7 }); break;
+      case 'camion-pompier': f('vehicule', doorX, 0, front + 3, { type: 'pompier', color: 0xD62828 }); break;
+      case 'colonnade': f('colonnade', doorX, 0, front + 1.1, { cw: 5.4, ch: wallTop - 0.1, color: shade(H.wall.color, 0.06), roof: H.roof.color }); break;
+      case 'mats-drapeaux': [[-4.2, 'eu'], [-3.2, 'fr'], [4.2, 'fr']].forEach(([dx, fl]) => f('mat-drapeau', doorX + dx, 0, front + 3.4, { flag: fl, top: 6.2 })); break;
+      case 'marches': f('marches', doorX, 0, front + 2.1, { mw: 5.4 }); break;
+      case 'fleche': { const tx = w / 2 + 1.5, tt = FOUND_H + 5 * CPF * COURSE; f('fleche', tx, tt, 0, { r: 1.75, h: 5, color: H.roof.color, top: tt + 6.2 }); break; }
+      case 'vitraux': for (let k = 0; k < Math.floor((w - 1) / 2); k++) for (const sz of [1, -1]) f('vitrail', -w / 2 + 1.5 + k * 2, FOUND_H + 2.1, sz * (half + 0.23), { ry: sz > 0 ? 0 : Math.PI }); break;
+      case 'rosace': f('rosace', w / 2 + 1.5, FOUND_H + 6.2, 1.5 + 0.23, {}); break;
+      case 'parvis': for (let k = 0; k < 4; k++) f('dallage', w / 2 + 1.5, 0.03, 1.5 + 0.7 + k * 0.85, { big: true, wide: 1.6 }); break;
+      case 'ifs': for (const [x, z] of [[-w / 2 - 1.2, front + 1], [w / 2 + 3.6, front + 1.6], [-w / 2 - 1.2, -half - 0.6]]) f('if', x, 0, z); break;
+      case 'quai': f('quai', 0, 0, front + 1.7, { qw: w + 2, qd: 2.8 }); break;
+      case 'rails': f('rails', 2.5, 0, front + 4.6, { rw: w + 9 }); break;
+      case 'train': f('train', w / 2 + 1.6, 0.3, front + 4.6, {}); break;
+      case 'bancs': for (const x of [-w / 4, w / 4]) f('banc', x, 0.45, front + 1.3, {}); break;
+      case 'parking': f('parking', 0, 0.03, front + 4.4, { pw: w, pd: 6 }); break;
+      case 'voitures': [[-w / 2 + 1.6, 0x2F6FD1], [-w / 2 + 4.2, 0xF2F2EC], [w / 2 - 2.2, 0x34495E]].forEach(([x, col]) => f('vehicule', x, 0, front + 4.6, { type: 'voiture', color: col, ry: Math.PI / 2 })); break;
+      case 'chariots': f('chariots', doorX + 2.2, 0, front + 1.1, {}); break;
+      case 'croix-verte': f('croix-verte', doorX, wallTop + 1.3, front - 0.4, {}); break;
+      case 'helipad': f('helipad', -w / 4, wallTop + 0.42, -0.6, { r: Math.min(2.4, half - 0.6) }); break;
+      case 'ambulance': f('vehicule', w / 2 + 2.6, 0, front + 2.8, { type: 'ambulance', color: 0xF7F7F2 }); break;
+      case 'sheds': for (let k = 0; k < Math.floor(d / 2.2); k++) f('shed', 0, wallTop + 0.42, -half + 1.2 + k * 2.2, { sw: w - 0.8, sd: 2.1, ry: Math.PI }); break;
+      case 'cheminees-usine': for (const [x, hh] of [[-w / 2 + 1.6, 9], [-w / 2 + 4, 7]]) f('cheminee-usine', x, 0, -half - 1.4, { h: wallTop + hh, top: wallTop + hh + 2 }); break;
+      case 'citerne': f('citerne', w / 2 + 2.2, 0, -half + 1.6, {}); break;
+      case 'palettes': for (let k = 0; k < 3; k++) f('palette-stock', w / 2 + 1.8, 0, front + 0.6 + k * 1.3, { n: 2 + (k % 2) }); break;
+      case 'fourgon-usine': f('vehicule', -w / 2 - 2, 0, front + 2.2, { type: 'van', color: 0x2F6FD1, ry: Math.PI / 2 }); break;
       default:
         if (name.startsWith('lucarnes')) {
           const n = +name.slice(8) || 2, t = 0.38, z = (half + R.over) * (1 - t) - 0.15, y = R.eaveY + (R.ridgeY - R.eaveY) * t;
@@ -298,7 +341,7 @@ function features(H, m, M) {
 
 export function buildHouse(H) {
   seed = 1 + (H.index || 0) * 101 + (H.lap || 0) * 7;
-  const main = { w: H.w, d: H.d, floors: H.floors, roof: H.roof, win: H.win, x: 0, z: 0, omit: [] };
+  const main = { w: H.w, d: H.d, floors: H.floors, roof: H.roof, win: H.win, door: H.door, x: 0, z: 0, omit: [] };
   const vols = [main, ...(H.wings ? H.wings(main) : []).map(v => ({ roof: H.roof, ...v, omit: v.omit || [] }))];
   const stages = { fond: [], murs: [], charp: [], toit: [], menu: [], fini: [] };
   let M = null, ridgeY = 0;
@@ -317,6 +360,7 @@ export function buildHouse(H) {
   const cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;
   for (const it of items) { it.x -= cx; it.z -= cz; }
   const W = x1 - x0 + 2, D = z1 - z0 + 2;
+  for (const it of items) if (it.top) ridgeY = Math.max(ridgeY, it.top);
   return { items, wallTop: M.wallTop, rise: M.R.rise, half: H.d / 2, w: W, d: D, ridgeY: ridgeY + (H.feats.includes('tours') ? 2 : 0), plot: Math.max(W, D) + 4 };
 }
 

@@ -18,7 +18,7 @@ Les étapes de chaque maison : voirie (les rues de la parcelle), fondations (par
 
 ## Structure
 - `src/game/rules.js` : étapes, maisons, améliorations, prix (sans dépendance)
-- `src/game/houses.js` : catalogue des 20 maisons et variantes des tours suivants
+- `src/game/houses.js` : catalogue des 30 constructions (maisons, bâtiments publics, château) et variantes des tours suivants
 - `src/game/house.js` : génère la liste des éléments d'une maison (volumes, toits, ouvertures, finitions)
 - `src/game/items3d.js` : dessin 3D de chaque élément
 - `src/game/city.js` : plan de la ville (parcelles en spirale, rues de chaque parcelle)
