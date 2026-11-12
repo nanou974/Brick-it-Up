@@ -6,7 +6,7 @@ const ty = { '.js': 'text/javascript', '.html': 'text/html', '.css': 'text/css',
 const srv = http.createServer((q, r) => { let f = path.join(root, decodeURIComponent(q.url.split('?')[0])); if (f.endsWith('/')) f += 'index.html'; fs.readFile(f, (e, d) => { if (e) { r.statusCode = 404; return r.end(); } r.setHeader('Content-Type', ty[path.extname(f)] || 'application/octet-stream'); r.end(d); }); }).listen(8797);
 const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1243/chrome-linux64/chrome', args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
 const ctx = await b.newContext({ viewport: { width: 390, height: 844 } });
-const p = await ctx.newPage(); const errs = []; p.on('pageerror', e => errs.push(e.message));
+const p = await ctx.newPage(); const errs = []; p.on('pageerror', e => { errs.push(e.message); console.log('ERR', e.message); });
 await p.goto('http://localhost:8797/index.html'); await p.waitForTimeout(3000); await p.click('#b-start');
 // 1) code de sauvegarde
 await p.evaluate(() => { const { game } = window.__bu; game.s.level = 7; game.s.stars = 6; game.s.credits = 1234; game.loadHouse(); });

@@ -5,7 +5,7 @@ import { Sound } from './audio.js';
 import { STAGES, UPGRADES, PERKS, COSMETICS, params, tierOf, TIER_STEP } from './rules.js';
 import { STAGE_ICONS, UP_ICONS, COIN, STAR, GEAR, CHEST } from './icons.js';
 import { encodeSave, decodeSave } from './savecode.js';
-import qrcode from './vendor/qrcode.mjs';
+import qrcode from './vendor/qrcode.js';
 import { VERSION } from './version.js';
 
 const SAVE_KEY = 'brick-it-up-save', VOL_KEY = 'brick-it-up-volume';
@@ -388,14 +388,14 @@ function importCode(code) {
   $('t-code-in').value = code; codeArmed = null; $('b-code-load').classList.remove('armed'); $('b-code-load').textContent = 'CHARGER CETTE PARTIE';
   checkCode();
 }
-const findCode = (text) => (String(text || '').match(/BIU1-[A-Za-z0-9_-]+/) || [])[0];
+const findCode = (text) => (String(text || '').match(/BIU[12]-[A-Za-z0-9_-]+/) || [])[0];
 
 // ---------- QR code ----------
 // Le QR code contient un lien vers la version web avec la partie dedans :
 // l'appareil photo du téléphone ouvre le jeu dans le navigateur, et le scanner du jeu sait aussi le lire.
 const WEB_URL = 'https://nanou974.github.io/Brick-it-Up/';
 function drawQR(code) {
-  try { const q = qrcode(0, 'L'); q.addData(`${WEB_URL}#code=${code}`, 'Byte'); q.make(); $('qr').innerHTML = q.createSvgTag({ cellSize: 4, margin: 2, scalable: true }); }
+  try { const q = qrcode(0, 'M'); q.addData(`${WEB_URL}#code=${code}`, 'Byte'); q.make(); $('qr').innerHTML = q.createSvgTag({ cellSize: 4, margin: 2, scalable: true }); }
   catch { $('qr').textContent = ''; }
 }
 // Lien ouvert depuis un QR code : on propose de charger la partie (et on retire le code de l'adresse)

@@ -116,8 +116,8 @@ Animations : roues qui tournent, feux stop et cabine qui plonge au freinage, fum
 
 ## Sauvegarde
 - Enregistrée sur l'appareil (localStorage), toutes les 5 s et en quittant.
-- Code de sauvegarde (Paramètres) : la partie est compressée puis chiffrée (AES-GCM) dans un texte « BIU1-… » d'environ 400 caractères, à copier ou partager, puis à coller sur un autre appareil. Un code abîmé ou modifié est refusé.
-- QR code : il contient un lien vers la version web avec le code (`…/Brick-it-Up/#code=BIU1-…`). Le bouton « Scanner un QR code » du jeu le lit avec la caméra (jsQR, aussi sur iPhone) ; l'appareil photo du téléphone ouvre la version web, qui propose de charger la partie. Dans tous les cas, le jeu montre ce que contient la partie et demande de confirmer.
+- Code de sauvegarde (Paramètres) : la partie est réduite à l'essentiel (niveau, éléments posés, étoiles, pièces, stock, améliorations, boutique, articles possédés et équipés, coffre) sous forme de nombres compacts, puis chiffrée (AES-GCM) dans un texte « BIU2-… » d'environ 80 à 100 caractères (format détaillé dans `src/game/savecode.js` ; les anciens codes « BIU1- » restent acceptés), à copier ou partager, puis à coller sur un autre appareil. Un code abîmé ou modifié est refusé.
+- QR code : il contient un lien vers la version web avec le code (`…/Brick-it-Up/#code=BIU2-…`). Il reste simple (≈ 50 modules de côté) pour les caméras moyennes. Le bouton « Scanner un QR code » du jeu le lit avec la caméra (jsQR, aussi sur iPhone) ; l'appareil photo du téléphone ouvre la version web, qui propose de charger la partie. Dans tous les cas, le jeu montre ce que contient la partie et demande de confirmer.
 
 ## Mises à jour (version web)
 Le jeu vérifie s'il existe une nouvelle version au lancement, au retour dans le jeu et toutes les 10 minutes. Sur l'écran titre, il recharge tout seul ; en pleine partie, un bandeau propose de redémarrer (partie sauvegardée) ou plus tard.
