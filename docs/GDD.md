@@ -11,12 +11,20 @@
 ## Étapes d'une maison
 | Étape | Élément | Crédits au niveau 1 |
 | --- | --- | --- |
+| Voirie | tronçon de rue, carrefour, réverbère, arbre | 1 |
 | Fondations | parpaing, dalle | 1 |
 | Murs | brique, pignon | 1 |
 | Charpente | ferme (triangle de poutres) | 4 |
 | Toiture | tuile | 2 |
 | Menuiseries | fenêtre, porte | 6 |
 | Finitions | cheminée, allée, massifs, boîte aux lettres, lampadaire, balcon, piscine, tours | 5 |
+
+## La ville
+Chaque construction terminée reste en place : elles forment une ville qui grandit autour d'une place centrale (fontaine, bancs, massifs).
+- Parcelles de 32 m posées en spirale autour de la place ; rues de 7 m de large (chaussée, trottoirs, bordures, réverbères, arbres).
+- Chaque chantier commence par l'étape **Voirie** : on pose les rues qui bordent la parcelle et qui n'existent pas encore (24 éléments pour la première, 11 à 17 ensuite).
+- Les constructions terminées sont affichées en version simplifiée et fusionnée (une par image au chargement) pour que la ville reste fluide.
+- On peut dézoomer et glisser à deux doigts pour voir toute la ville.
 
 ## Maisons
 20 maisons, toutes différentes par leur forme (catalogue dans `src/game/houses.js`). La 20e est toujours le château.

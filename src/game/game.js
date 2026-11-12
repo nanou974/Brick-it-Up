@@ -2,13 +2,14 @@
 // revenu hors ligne. Sans affichage.
 import { STAGES, UPGRADES, PERKS, COSMETICS, houseFor, params, itemValue, upgradeCost, perkCost, tierOf, TIER_STEP, CHEST_MIN_SHARE, CHEST_MAX_SHARE } from './rules.js';
 import { buildHouse, stageCounts } from './house.js';
+import { voirieItems } from './city.js';
 
 export const RUSH_MAX = 0.6; // tapes sur l'écran : au plus 60 % de l'intervalle par livraison
 const RATE_TAU = 180;        // le revenu de jeu est mesuré sur environ 3 minutes
 
 export function freshState() {
   return {
-    v: 2, level: 1, stars: 0, starsTotal: 0, credits: 0, placed: 0, stock: 0, deliveryT: 0, workerT: 0, rushT: 0,
+    v: 3, level: 1, stars: 0, starsTotal: 0, credits: 0, placed: 0, stock: 0, deliveryT: 0, workerT: 0, rushT: 0,
     up: Object.fromEntries(UPGRADES.map(u => [u.key, 0])),
     perks: Object.fromEntries(PERKS.map(p => [p.key, 0])),
     owned: { truck: ['jaune'], worker: ['orange'], decor: ['prairie'] },
@@ -30,11 +31,15 @@ export class Game {
     this.s.owned = { ...f.owned, ...(this.s.owned || {}) };
     this.s.equip = { ...f.equip, ...(this.s.equip || {}) };
     if (this.s.v < 2) { this.s.starsTotal = this.s.stars; this.s.v = 2; } // ancienne sauvegarde : les étoiles deviennent une monnaie
+    if (this.s.v < 3) { this.s.v = 3; this.migrateVoirie = true; } // la voirie s'ajoute avant la maison en cours
     if (this.s.chest > 0) { this.s.credits += this.s.chest; this.s.chest = 0; } // ancien coffre hors ligne : on rend les pièces
     this.listeners = { place: [], deliver: [], level: [] };
     this.earnedTick = 0;
     this.liveWorkers = false; // true : ce sont les ouvriers visibles qui posent (à la fin de leur trajet)
     this.loadHouse();
+    // Ancienne sauvegarde au milieu d'une maison : la voirie de sa parcelle est considérée comme déjà faite
+    if (this.migrateVoirie && this.s.placed > 0) this.s.placed = Math.min(this.items.length, this.s.placed + this.voirie.length);
+    this.migrateVoirie = false;
   }
   on(ev, fn) { this.listeners[ev].push(fn); }
   emit(ev, ...a) { for (const f of this.listeners[ev]) f(...a); }
@@ -42,7 +47,9 @@ export class Game {
   loadHouse() {
     this.house = houseFor(this.s.level);
     this.plan = buildHouse(this.house);
-    this.items = this.plan.items;
+    // D'abord la voirie (les rues qui bordent la parcelle), puis la maison
+    this.voirie = voirieItems(this.s.level - 1, 0);
+    this.items = [...this.voirie, ...this.plan.items];
     this.counts = stageCounts(this.items);
     this.s.placed = Math.min(this.s.placed, this.items.length);
   }

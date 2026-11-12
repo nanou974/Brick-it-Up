@@ -41,18 +41,25 @@ export const DECORS = {
 };
 
 // Construit le décor autour d'une maison (emprise plan.w × plan.d, route en roadZ)
-export function buildDecor(kind, plan, roadZ) {
-  const D = DECORS[kind] || DECORS.prairie, g = new THREE.Group(), P = plan.plot;
-  const n = D.city ? 18 : 26;
+// bounds : emprise de la ville (repère du chantier) ; le décor l'entoure sans jamais empiéter dessus
+export function buildDecor(kind, plan, roadZ, bounds) {
+  const D = DECORS[kind] || DECORS.prairie, g = new THREE.Group();
+  const B = bounds || { x0: -plan.w / 2, x1: plan.w / 2, z0: roadZ, z1: plan.d / 2 };
+  const cx = (B.x0 + B.x1) / 2, cz = (B.z0 + B.z1) / 2, hx = (B.x1 - B.x0) / 2, hz = (B.z1 - B.z0) / 2;
+  const n = (D.city ? 18 : 30) + Math.round((hx + hz) / 6);
+  // Sur le pourtour d'un rectangle élargi autour de la ville (jamais à l'intérieur)
   for (let i = 0; i < n; i++) {
-    const a = (i / n) * Math.PI * 2 + rnd(i) * 0.2, r = P * 0.75 + (D.city ? 7 : 4) + rnd(i * 3) * 10;
-    const x = Math.cos(a) * r, z = Math.sin(a) * r;
-    if (Math.abs(z - roadZ) < (D.city ? 6 : 3.5) || (z > 0 && Math.abs(x) < P * 0.6) || (Math.abs(x) < plan.w / 2 + 2.5 && Math.abs(z) < plan.d / 2 + 2.5)) continue;
+    const out = (D.city ? 8 : 4) + rnd(i * 3) * 12, X = hx + out, Z = hz + out;
+    let u = ((i + rnd(i) * 0.6) / n) * 2 * (X + Z) * 2, x, z;
+    if (u < 2 * X) { x = -X + u; z = -Z; } else if ((u -= 2 * X) < 2 * Z) { x = X; z = -Z + u; } else if ((u -= 2 * Z) < 2 * X) { x = X - u; z = Z; } else { u -= 2 * X; x = -X; z = Z - u; }
+    x += cx; z += cz;
+    if (z > cz && Math.abs(x) < 16) continue; // rien entre la caméra et le chantier
     const t = new THREE.Group(); D.tree(t, 0.8 + rnd(i * 7) * 0.6, i); t.position.set(x, 0, z);
     if (D.city) t.lookAt(0, 0, 0);
     g.add(t);
   }
   // Éléments lointains, derrière la route
+  roadZ = Math.min(roadZ, B.z0); // les éléments lointains se placent derrière la ville
   if (D.far === 'mer') {
     const sea = mesh(new THREE.PlaneGeometry(400, 120), mat(0x2E9BD6, { roughness: 0.2, emissive: 0x0B3F6A, emissiveIntensity: 0.2 }), 0, 0.05, roadZ - 70);
     sea.rotation.x = -Math.PI / 2; g.add(sea);
@@ -63,7 +70,7 @@ export function buildDecor(kind, plan, roadZ) {
     g.add(mesh(new THREE.ConeGeometry(h * 0.8, h, 6), mat(0x8A939C), x, h / 2, z));
     g.add(mesh(new THREE.ConeGeometry(h * 0.3, h * 0.38, 6), mat(0xF7FAFC), x, h * 0.81, z));
   }
-  if (D.city) for (let k = 0; k < 8; k++) {
+  if (D.city && !bounds) for (let k = 0; k < 8; k++) {
     const l = new THREE.Group(); l.add(mesh(new THREE.CylinderGeometry(0.06, 0.08, 3, 6), mat(0x2E3338), 0, 1.5, 0)); l.add(mesh(new THREE.SphereGeometry(0.2, 8, 6), mat(0xFFF2B0, { emissive: 0xFFD36B, emissiveIntensity: 0.9 }), 0, 3.1, 0));
     l.position.set(-28 + k * 8, 0, roadZ + 2.6); g.add(l);
   }

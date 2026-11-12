@@ -56,7 +56,7 @@ game.on('place', (it, gain, byWorker, index) => {
   site.updateGhost(game);
   site.setStock(game.s.stock, game.p.cap);
   // Bruit de pose (raccourci quand les poses sont très rapprochées) et gain qui s'envole
-  const landed = (small) => { const nowP = performance.now(); sfx.place(it.stage, nowP - lastPlaceAt < 160); lastPlaceAt = nowP; floatGain(`+${fmt(gain)}`, small); };
+  const landed = (small) => { const nowP = performance.now(); sfx.place(STAGES[it.stage].key, nowP - lastPlaceAt < 160); lastPlaceAt = nowP; floatGain(`+${fmt(gain)}`, small); };
   // Pose par un ouvrier : il va chercher l'élément sur la palette et le porte jusqu'à la maison
   if (byWorker) site.workerJob(index, (sec) => { landed(true); game.noteTrip(sec); });
   else { site.addItem(index, true); landed(false); }

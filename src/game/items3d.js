@@ -30,6 +30,57 @@ export function makeItem(it) {
   g.rotation.order = 'YXZ'; // d'abord l'inclinaison (rx), puis l'orientation (ry)
   const c = it.color;
   switch (it.kind) {
+    // ---------- Voirie (rues de la ville) ----------
+    case 'route': { // tronçon de rue : chaussée, bordures, trottoirs, pointillés au centre
+      const L = it.len, asph = mat(0x45494F, { roughness: 0.95 }), side = mat(0xC9C4B8), curb = mat(0xE6E2D8);
+      g.add(box(L, 0.08, 4.4, asph, 0, 0.04, 0));
+      for (const s2 of [-1, 1]) { g.add(box(L, 0.16, 0.18, curb, 0, 0.08, s2 * 2.29)); g.add(box(L, 0.14, 1.12, side, 0, 0.07, s2 * 2.94)); }
+      for (let k = 0; k < 2; k++) g.add(box(L * 0.22, 0.012, 0.13, mat(0xF2F2EC), -L / 4 + k * L / 2, 0.086, 0));
+      break;
+    }
+    case 'carrefour': { // carrefour : chaussée, coins de trottoir, passages piétons
+      g.add(box(7, 0.08, 7, mat(0x45494F, { roughness: 0.95 }), 0, 0.04, 0));
+      for (const sx of [-1, 1]) for (const sz of [-1, 1]) g.add(box(1.3, 0.14, 1.3, mat(0xC9C4B8), sx * 2.85, 0.07, sz * 2.85));
+      const white = mat(0xF2F2EC);
+      for (let k = 0; k < 5; k++) for (const s2 of [-1, 1]) {
+        g.add(box(0.36, 0.012, 1.1, white, -1.6 + k * 0.8, 0.086, s2 * 2.9));
+        g.add(box(1.1, 0.012, 0.36, white, s2 * 2.9, 0.086, -1.6 + k * 0.8));
+      }
+      break;
+    }
+    case 'reverbere': {
+      g.add(cyl(0.07, 0.1, 3.4, 8, mat(0x2E3338), 0, 1.7, 0));
+      g.add(box(0.9, 0.08, 0.08, mat(0x2E3338), -0.4, 3.35, 0));
+      const l = new THREE.Mesh(new THREE.SphereGeometry(0.2, 10, 8), mat(0xFFF2B0, { emissive: 0xFFD36B, emissiveIntensity: 0.9 })); l.position.set(-0.8, 3.2, 0); g.add(l);
+      break;
+    }
+    case 'arbre-rue': {
+      g.add(box(1, 0.05, 1, mat(0x5B4A3A), 0, 0.15, 0));
+      g.add(cyl(0.12, 0.16, 1.6, 6, mat(0x7A5230), 0, 0.8, 0));
+      for (let k = 0; k < 3; k++) { const b = new THREE.Mesh(new THREE.IcosahedronGeometry(0.75 - k * 0.12, 0), mat(k % 2 ? LEAF : LEAF2)); b.position.set((k - 1) * 0.35, 2 + (k % 2) * 0.35, (rnd(k + it.x) - 0.5) * 0.4); g.add(b); }
+      break;
+    }
+    // ---------- Place centrale ----------
+    case 'place': {
+      const W = it.size;
+      g.add(box(W, 0.1, W, mat(0xD8CBB0), 0, 0.05, 0));
+      for (let k = -2; k <= 2; k++) { g.add(box(W, 0.012, 0.25, mat(0xC2B396), 0, 0.106, k * W / 5)); g.add(box(0.25, 0.012, W, mat(0xC2B396), k * W / 5, 0.106, 0)); }
+      // fontaine
+      g.add(cyl(3.2, 3.4, 0.6, 24, mat(0xB9B2A3), 0, 0.3, 0)); g.add(cyl(2.8, 2.8, 0.1, 24, mat(0x3FB6E8, { roughness: 0.1, emissive: 0x0B4F7A, emissiveIntensity: 0.3 }), 0, 0.58, 0));
+      g.add(cyl(0.35, 0.5, 1.6, 10, mat(0xB9B2A3), 0, 1.2, 0)); g.add(cyl(1.1, 0.8, 0.3, 14, mat(0xB9B2A3), 0, 2.05, 0)); g.add(cyl(0.9, 0.9, 0.05, 14, mat(0x3FB6E8, { roughness: 0.1, emissive: 0x0B4F7A, emissiveIntensity: 0.3 }), 0, 2.2, 0));
+      g.add(cyl(0.12, 0.2, 0.8, 8, mat(0xBFE8FA, { transparent: true, opacity: 0.6 }), 0, 2.6, 0));
+      // bancs, massifs et arbres aux quatre coins
+      for (const [sx, sz] of [[1, 1], [-1, 1], [1, -1], [-1, -1]]) {
+        const bx = sx * W * 0.3, bz = sz * W * 0.3;
+        for (const k of [0, 1]) { const bench = new THREE.Group(); bench.add(box(1.6, 0.08, 0.5, mat(WOOD), 0, 0.45, 0)); bench.add(box(1.6, 0.4, 0.08, mat(WOOD), 0, 0.7, -0.22)); for (const e of [-0.65, 0.65]) bench.add(box(0.08, 0.45, 0.45, mat(METAL), e, 0.22, 0)); bench.position.set(bx + (k ? 0 : sx * 2.4), 0, bz + (k ? sz * 2.4 : 0)); bench.rotation.y = k ? (sz > 0 ? Math.PI : 0) : (sx > 0 ? -Math.PI / 2 : Math.PI / 2); g.add(bench); }
+        g.add(cyl(1.2, 1.2, 0.35, 12, mat(0x8A6E4B), bx * 1.35, 0.18, bz * 1.35));
+        for (let k = 0; k < 5; k++) { const f = new THREE.Mesh(new THREE.IcosahedronGeometry(0.3, 0), mat([LEAF, 0xF25C78, 0xFFD23F, LEAF2, 0xFFFFFF][k])); f.position.set(bx * 1.35 + (rnd(k) - 0.5) * 1.4, 0.5, bz * 1.35 + (rnd(k * 3) - 0.5) * 1.4); g.add(f); }
+        const tr = new THREE.Group(); tr.add(cyl(0.18, 0.25, 2.2, 6, mat(0x7A5230), 0, 1.1, 0));
+        for (let k = 0; k < 3; k++) { const b = new THREE.Mesh(new THREE.IcosahedronGeometry(1.2 - k * 0.2, 0), mat(k % 2 ? LEAF : LEAF2)); b.position.set((k - 1) * 0.6, 2.8 + (k % 2) * 0.5, 0); tr.add(b); }
+        tr.position.set(sx * W * 0.42, 0, sz * W * 0.42); g.add(tr);
+      }
+      break;
+    }
     // ---------- Gros œuvre ----------
     case 'parpaing':
       g.add(box(it.sx, it.sy, it.sz, mat(0x9AA0A6)));

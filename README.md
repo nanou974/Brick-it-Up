@@ -12,15 +12,17 @@ Jeu mobile 3D incrémental (Three.js + Capacitor) : le camion livre les matéria
 1. Le camion livre un élément toutes les 10 s (au début).
 2. Touche le gros bouton pour le poser : il tombe à sa place et rapporte des crédits.
 3. Achète des améliorations : rapport, livraison, camion, entrepôt, ouvriers.
-4. Maison terminée : une étoile (+5 % de crédits pour toujours) et une maison plus grande.
+4. Maison terminée : une étoile et une maison plus grande, construite sur la parcelle suivante : les maisons finies forment une ville.
 
-Les étapes de chaque maison : fondations (parpaings), murs (briques), charpente, toiture, menuiseries, finitions.
+Les étapes de chaque maison : voirie (les rues de la parcelle), fondations (parpaings), murs (briques), charpente, toiture, menuiseries, finitions.
 
 ## Structure
 - `src/game/rules.js` : étapes, maisons, améliorations, prix (sans dépendance)
 - `src/game/houses.js` : catalogue des 20 maisons et variantes des tours suivants
 - `src/game/house.js` : génère la liste des éléments d'une maison (volumes, toits, ouvertures, finitions)
 - `src/game/items3d.js` : dessin 3D de chaque élément
+- `src/game/city.js` : plan de la ville (parcelles en spirale, rues de chaque parcelle)
+- `src/game/city3d.js` : affichage de la ville (constructions terminées fusionnées, rues, place)
 - `src/game/game.js` : moteur (livraisons, pose, ouvriers, achats, absence)
 - `src/game/scene.js` : scène 3D (chantier, camion, palette, ouvriers)
 - `src/game/main.js` : interface, sauvegarde, boucle de jeu

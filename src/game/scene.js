@@ -2,8 +2,10 @@
 import * as THREE from 'three';
 import { makeItem } from './items3d.js';
 import { DECORS, buildDecor } from './decor.js';
+import { CityView } from './city3d.js';
+import { LOT, STREET, cityBounds, lotCenter } from './city.js';
 
-const ZOOM_MIN = 0.55, ZOOM_MAX = 2.2; // 0,55 = tout près, 2,2 = vue d'ensemble
+const ZOOM_MIN = 0.55, ZOOM_MAX = 3.6; // 0,55 = tout près, 3,6 = vue sur la ville
 const rnd = (a) => { const x = Math.sin(a * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
 
 // ---------- Matériaux partagés (décor, camion, ouvriers) ----------
@@ -78,7 +80,7 @@ export class Site {
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x8FCFF5);
     this.scene.fog = new THREE.Fog(0x8FCFF5, 45, 110);
-    this.camera = new THREE.PerspectiveCamera(46, 1, 0.1, 300);
+    this.camera = new THREE.PerspectiveCamera(46, 1, 0.1, 2000);
     this.hemi = new THREE.HemisphereLight(0xDDEEFF, 0x6B8E4E, 1.1); this.scene.add(this.hemi);
     const sun = this.sun = new THREE.DirectionalLight(0xFFF1D6, 2.2);
     sun.position.set(14, 22, 10); sun.castShadow = true;
@@ -86,8 +88,9 @@ export class Site {
     this.scene.add(sun, sun.target);
 
     // Herbe, route et arbres
-    const grass = this.grass = new THREE.Mesh(new THREE.PlaneGeometry(300, 300), new THREE.MeshStandardMaterial({ color: 0x7CC35A, roughness: 0.9, flatShading: true })); grass.rotation.x = -Math.PI / 2; grass.receiveShadow = true; this.scene.add(grass);
-    this.road = new THREE.Mesh(new THREE.PlaneGeometry(300, 4.2), new THREE.MeshStandardMaterial({ color: 0x4B4F55, roughness: 0.9 })); this.road.rotation.x = -Math.PI / 2; this.road.receiveShadow = true; this.scene.add(this.road);
+    const grass = this.grass = new THREE.Mesh(new THREE.PlaneGeometry(2000, 2000), new THREE.MeshStandardMaterial({ color: 0x7CC35A, roughness: 0.9, flatShading: true })); grass.rotation.x = -Math.PI / 2; grass.receiveShadow = true; this.scene.add(grass);
+    this.road = new THREE.Mesh(new THREE.PlaneGeometry(300, 4.2), new THREE.MeshStandardMaterial({ color: 0x4B4F55, roughness: 0.9 })); this.road.rotation.x = -Math.PI / 2; this.road.receiveShadow = true; this.road.visible = false; this.scene.add(this.road); // remplacée par les rues de la ville
+    this.city = new CityView(this.scene);
     this.decor = new THREE.Group(); this.scene.add(this.decor);
     this.plotMesh = null; this.houseGroup = new THREE.Group(); this.scene.add(this.houseGroup);
     this.falling = []; this.dust = []; this.meshes = [];
@@ -115,7 +118,8 @@ export class Site {
     const right = new THREE.Vector3(Math.cos(o), 0, -Math.sin(o)), fwd = new THREE.Vector3(-Math.sin(o), 0, -Math.cos(o));
     this.panTarget.addScaledVector(right, -dx * k).addScaledVector(fwd, dy * k);
     // On reste autour du chantier (on ne se perd pas dans le décor)
-    const lim = (this.plan ? Math.max(this.plan.w, this.plan.d) : 10) * 0.8 + 6;
+    // On reste dans la ville (on ne se perd pas dans le décor)
+    const b = this.bounds, lim = b ? Math.max(b.x1 - b.x0, b.z1 - b.z0) / 2 + Math.hypot((b.x0 + b.x1) / 2, (b.z0 + b.z1) / 2) : 20;
     if (this.panTarget.length() > lim) this.panTarget.setLength(lim);
   }
   recenter() { this.panTarget.set(0, 0, 0); }
@@ -147,7 +151,7 @@ export class Site {
         // On attend un vrai écartement (20 px) pour ne pas zoomer pendant des tapes rapides à deux pouces
         const d = pinchDist(), m = mid(), P = this.pinch;
         if (!P.active && Math.abs(d - P.d0) > 20) { P.active = true; P.d0 = d; P.z0 = this.zoomTarget; }
-        if (P.active) this.zoomTarget = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, P.z0 * P.d0 / Math.max(10, d)));
+        if (P.active) this.zoomTarget = Math.max(ZOOM_MIN, Math.min(this.zoomMax || ZOOM_MAX, P.z0 * P.d0 / Math.max(10, d)));
         // Les deux doigts glissent ensemble : la vue se déplace (après 20 px, pour ignorer les tapes à deux pouces)
         if (!P.panning && Math.hypot(m.x - P.m0.x, m.y - P.m0.y) > 20) { P.panning = true; P.last = m; }
         if (P.panning) { this.panBy(m.x - P.last.x, m.y - P.last.y); P.last = m; }
@@ -170,7 +174,7 @@ export class Site {
     canvas.addEventListener('mousedown', e => { if (e.button === 2) this.rmb = { x: e.clientX, y: e.clientY }; });
     addEventListener('mousemove', e => { if (this.rmb) { this.panBy(e.clientX - this.rmb.x, e.clientY - this.rmb.y); this.rmb = { x: e.clientX, y: e.clientY }; } });
     addEventListener('mouseup', e => { if (e.button === 2) this.rmb = null; });
-    canvas.addEventListener('wheel', e => { e.preventDefault(); this.zoomTarget = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, this.zoomTarget * (1 + Math.sign(e.deltaY) * 0.1))); }, { passive: false });
+    canvas.addEventListener('wheel', e => { e.preventDefault(); this.zoomTarget = Math.max(ZOOM_MIN, Math.min(this.zoomMax || ZOOM_MAX, this.zoomTarget * (1 + Math.sign(e.deltaY) * 0.1))); }, { passive: false });
   }
 
 
@@ -178,7 +182,7 @@ export class Site {
   // Prépare le chantier d'une nouvelle maison (et repose les éléments déjà posés)
   setHouse(game) {
     const { plan, house } = game;
-    this.plan = plan; this.house = house; this.items = plan.items;
+    this.plan = plan; this.house = house; this.items = game.items; // voirie puis maison
     for (const w of this.workers) { w.userData.job = null; this.workerGroup.remove(w); }
     this.workers = [];
     for (const m of this.meshes) if (m) this.houseGroup.remove(m);
@@ -188,13 +192,21 @@ export class Site {
     // Terrain : l'emprise de la maison et de ses abords, avec une marge
     this.plotMesh = new THREE.Mesh(new THREE.BoxGeometry(plan.w + 3, 0.06, plan.d + 3), new THREE.MeshStandardMaterial({ color: 0xB08A5B, roughness: 0.95, flatShading: true })); this.plotMesh.position.set(0, 0.01, 0); this.plotMesh.receiveShadow = true; this.scene.add(this.plotMesh);
     // Route derrière la maison : on voit le camion arriver au-dessus du chantier
-    this.roadZ = -plan.d / 2 - 1.5 - 2.4; this.road.position.set(0, 0.02, this.roadZ);
+    // Ville : le chantier est sur sa parcelle, le camion arrive par la rue de derrière
+    const lvl = game.s.level, c = lotCenter(lvl - 1), cb = cityBounds(lvl);
+    this.city.setLevel(lvl);
+    this.bounds = { x0: cb.x0 - c.x, x1: cb.x1 - c.x, z0: cb.z0 - c.z, z1: cb.z1 - c.z };
+    // Le dézoom maximal grandit avec la ville : on peut toujours la voir en entier
+    this.roadZ = -LOT / 2; this.road.position.set(0, 0.02, this.roadZ);
     // Décor autour du terrain (déterministe), selon le décor choisi
-    this.decor.clear(); this.decor.add(buildDecor(this.skin.decor, plan, this.roadZ)); this.applyDecorColors();
+    this.decor.clear(); this.decor.add(buildDecor(this.skin.decor, plan, this.roadZ, this.bounds)); this.applyDecorColors();
     for (let i = 0; i < game.s.placed; i++) this.addItem(i, false);
-    this.palletPos = new THREE.Vector3(-plan.w / 2 - 0.2, 0, -plan.d / 2 - 0.6);
+    // Palette au bord de la rue de derrière, là où le camion décharge
+    this.palletPos = new THREE.Vector3(Math.max(-(LOT - STREET) / 2 + 1.5, -plan.w / 2 - 0.2), 0, -LOT / 2 + STREET / 2 + 1.6);
     this.pallet.position.copy(this.palletPos);
     this.camDist = 9 + Math.max(plan.w, plan.d * 1.1) * 1.3 + plan.ridgeY * 0.7;
+    const B = this.bounds, far = Math.max(-B.x0, B.x1, -B.z0, B.z1) * 2.4;
+    this.zoomMax = Math.max(ZOOM_MAX, Math.min(9, far / this.camDist));
     this.sun.shadow.camera.left = this.sun.shadow.camera.bottom = -P * 0.8; this.sun.shadow.camera.right = this.sun.shadow.camera.top = P * 0.8; this.sun.shadow.camera.updateProjectionMatrix();
     this.updateGhost(game);
   }
@@ -241,7 +253,7 @@ export class Site {
     Object.assign(this.skin, sk);
     if (changed.truck && this.truck) this.setTruck(this.truckTier, true);
     if (changed.worker && this.plan) { const n = this.workers.length; this.setWorkers(0); this.setWorkers(n); }
-    if (changed.decor && this.plan) { this.decor.clear(); this.decor.add(buildDecor(this.skin.decor, this.plan, this.roadZ)); this.applyDecorColors(); }
+    if (changed.decor && this.plan) { this.decor.clear(); this.decor.add(buildDecor(this.skin.decor, this.plan, this.roadZ, this.bounds)); this.applyDecorColors(); }
   }
 
   // Ouvriers visibles autour du chantier (8 au maximum)
@@ -266,7 +278,7 @@ export class Site {
   footprint() {
     let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity;
     for (let k = 0; k < this.meshes.length; k++) {
-      const it = this.items[k]; if (!this.meshes[k] || !it || it.stage > 1) continue;
+      const it = this.items[k]; if (!this.meshes[k] || !it || (it.kind !== 'parpaing' && it.kind !== 'dalle' && it.kind !== 'brique')) continue;
       x0 = Math.min(x0, it.x); x1 = Math.max(x1, it.x); z0 = Math.min(z0, it.z); z1 = Math.max(z1, it.z);
     }
     if (x0 === Infinity) return null;
@@ -319,7 +331,7 @@ export class Site {
     const pal = this.palletPos.clone().add(new THREE.Vector3(0.3, 0, -0.9));
     const drop = this.dropPoint(it, r), u = w.userData, here = w.position.clone(); here.y = 0;
     const toPal = this.route(here, pal, r), toDrop = this.route(pal, drop, r), toHome = this.route(drop, u.home.clone(), r);
-    u.job = { index, onDone, start: this.time, color: it.color || [0x9AA0A6, 0xC8553D, 0xA4703F, 0xB5512F, 0xF7F7F2, 0x62B04B][it.stage] };
+    u.job = { index, onDone, start: this.time, color: it.color || [0x4B4F55, 0x9AA0A6, 0xC8553D, 0xA4703F, 0xB5512F, 0xF7F7F2, 0x62B04B][it.stage] };
     u.speed = this.walkSpeed || 2.2;
     u.path = [...toPal.slice(0, -1).map(p => ({ p, act: 'via' })), { p: pal, act: 'take' },
       ...toDrop.slice(0, -1).map(p => ({ p, act: 'via' })), { p: drop, act: 'drop' },
@@ -522,7 +534,7 @@ export class Site {
       } else {                                                           // approche au rythme du minuteur
         // il entre vite dans le champ, puis avance pas à pas vers la palette
         // (il arrive par la droite, la palette est à gauche : tout le trajet reste à l'écran)
-        const k = Math.min(1, s.deliveryT / p.delivery), edge = this.plan.w / 2 + 5;
+        const k = Math.min(1, s.deliveryT / p.delivery), edge = LOT / 2 + 4;
         x = k < 0.08 ? THREE.MathUtils.lerp(50, edge, k / 0.08) : THREE.MathUtils.lerp(edge, stopX, (k - 0.08) / 0.92);
       }
       // Lissage (sauf quand il réapparaît au loin à droite)
@@ -541,7 +553,11 @@ export class Site {
     // Zoom lissé ; le brouillard recule avec la caméra pour que la maison reste nette en vue d'ensemble
     this.zoom += (this.zoomTarget - this.zoom) * Math.min(1, dt * 8);
     this.scene.fog.near = 45 * this.zoom; this.scene.fog.far = 110 * this.zoom;
-    const ty = 0.8 + this.plan.ridgeY * 0.45 * done, D = this.camDist * this.zoom;
+    // Pendant la voirie, la caméra prend du recul pour voir les rues autour de la parcelle
+    this.city.update();
+    const want = game.stage === 0 && !game.done ? Math.max(this.camDist, LOT * 1.15) : this.camDist;
+    this.camBase = this.camBase ? this.camBase + (want - this.camBase) * Math.min(1, dt * 1.5) : want;
+    const ty = 0.8 + this.plan.ridgeY * 0.45 * done, D = this.camBase * this.zoom;
     this.pan.lerp(this.panTarget, Math.min(1, dt * 10));
     this.camera.position.set(Math.sin(this.orbit) * D + this.pan.x, ty + D * 0.48, Math.cos(this.orbit) * D + 1.2 + this.pan.z);
     this.camera.lookAt(this.pan.x, ty, 0.8 + this.pan.z);

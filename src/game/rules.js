@@ -3,6 +3,7 @@
 // ---------- Étapes de construction ----------
 // Chaque maison se construit dans cet ordre. `val` = crédits rapportés par élément posé au niveau 1.
 export const STAGES = [
+  { key: 'voirie', name: 'Voirie', item: 'élément de voirie', items: 'éléments de voirie', val: 1 },
   { key: 'fond', name: 'Fondations', item: 'parpaing', items: 'parpaings', val: 1 },
   { key: 'murs', name: 'Murs', item: 'brique', items: 'briques', val: 1 },
   { key: 'charp', name: 'Charpente', item: 'poutre', items: 'poutres', val: 4 },

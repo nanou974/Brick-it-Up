@@ -324,3 +324,32 @@ export function buildHouse(H) {
 export function stageCounts(items) {
   const c = STAGES.map(() => 0); for (const it of items) c[it.stage]++; return c;
 }
+
+// ---------- Version simplifiée pour la ville ----------
+// Une maison terminée reste dans la ville : on fusionne les briques d'un même rang (et les parpaings,
+// les tuiles d'une même rangée) en longs blocs. Même allure de loin, beaucoup moins d'objets à dessiner.
+export function coarsen(items) {
+  const MERGE = new Set(['brique', 'parpaing', 'tuile', 'acrotere', 'toit-plat']);
+  const out = [], groups = new Map();
+  const r2 = (v) => Math.round((v || 0) * 100) / 100;
+  for (const it of items) {
+    if (!MERGE.has(it.kind) || it.kind === 'brique' && it.sy > 0.6) { out.push(it); continue; }
+    const alongX = Math.abs(Math.sin(it.ry || 0)) < 0.5; // pièce orientée le long de x (sinon le long de z)
+    const key = [it.kind, it.mat || '', r2(it.y), alongX ? 'x' : 'z', r2(alongX ? it.z : it.x), r2(it.rx), r2(it.ry), r2(it.sy), r2(it.sz), it.row ?? ''].join('|');
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(it);
+  }
+  for (const list of groups.values()) {
+    const alongX = Math.abs(Math.sin(list[0].ry || 0)) < 0.5, pos = (it) => alongX ? it.x : it.z;
+    list.sort((a, b) => pos(a) - pos(b));
+    let cur = null;
+    const flush = () => { if (!cur) return; const c = (cur.a + cur.b) / 2; out.push({ ...cur.it, sx: cur.b - cur.a, ...(alongX ? { x: c } : { z: c }) }); cur = null; };
+    for (const it of list) {
+      const a = pos(it) - it.sx / 2, b = pos(it) + it.sx / 2;
+      if (cur && a - cur.b < 0.12) cur.b = Math.max(cur.b, b);
+      else { flush(); cur = { a, b, it }; }
+    }
+    flush();
+  }
+  return out;
+}

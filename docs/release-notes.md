@@ -1,7 +1,8 @@
-## Brick'it Up v0.7.1
+## Brick'it Up v0.8.0
 
 Télécharge l'APK ci-dessous et ouvre-le : il s'installe par-dessus la version précédente, ta partie est conservée. La version web (https://nanou974.github.io/Brick-it-Up/) se met à jour toute seule.
 
-- **Déplacer la vue** : glisse avec deux doigts pour te déplacer autour du chantier (on peut pincer en même temps pour zoomer). À la souris : clic droit maintenu.
-- Bouton **RECENTRER** : il apparaît dès que la vue a été déplacée et la ramène sur le chantier.
-- La vue reste dans les environs du chantier pour qu'on ne s'y perde pas.
+- **La ville** : les maisons terminées restent en place et forment une ville qui grandit autour d'une place avec fontaine.
+- Nouvelle première étape **Voirie** : on pose d'abord les rues de la parcelle (chaussée, carrefours, réverbères, arbres), puis la maison.
+- Dézoome et glisse à deux doigts pour admirer toute la ville.
+- Partie en cours conservée : si tu étais au milieu d'une maison, ses rues sont déjà faites.

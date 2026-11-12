@@ -65,8 +65,14 @@ export class Sound {
 
   // Pose : un bruit de chantier propre à chaque matériau, légèrement différent à chaque fois.
   // fast = poses très rapprochées (doigt maintenu) : seulement le coup principal, plus court.
-  place(stage, fast = false) {
+  place(key, fast = false) {
     const v = () => 0.9 + Math.random() * 0.2, r = (a, b) => a + Math.random() * (b - a);
+    const stage = ['fond', 'murs', 'charp', 'toit', 'menu', 'fini'].indexOf(key);
+    if (key === 'voirie') { // voirie : plaque d'enrobé qui tombe, gravillons, coup de rouleau
+      this.thump(r(65, 75), 0.22, 0.5 * v()); this.fnoise(0.25, 0.25 * v(), { type: 'lowpass', f: 700, f2: 300 });
+      if (!fast) this.fnoise(0.3, 0.08, { f: 2200, q: 1, delay: 0.1, attack: 0.02, trem: 30 });
+      return;
+    }
     switch (stage) {
       case 0: // parpaing : choc lourd et granuleux, puis un coup de truelle
         this.thump(r(78, 92), 0.2, 0.55 * v()); this.fnoise(0.12, 0.3 * v(), { f: 650, q: 1.2 });

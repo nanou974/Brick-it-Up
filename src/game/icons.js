@@ -3,6 +3,7 @@ const svg = (body, vb = '0 0 64 64') => `<svg viewBox="${vb}" xmlns="http://www.
 const st = 'stroke="#1B2340" stroke-width="3" stroke-linejoin="round"';
 
 export const STAGE_ICONS = {
+  voirie: svg(`<g ${st}><path d="M22 6 H42 L58 58 H6 Z" fill="#4B4F55"/><path d="M32 10 V18 M32 26 V36 M32 44 V54" stroke="#fff" stroke-width="4"/><path d="M22 6 L6 58 M42 6 L58 58" stroke="#C9C4B8" stroke-width="5"/></g>`),
   fond: svg(`<path d="M6 26 L22 16 L58 16 L42 26 Z" fill="#C4C9CE" ${st}/><path d="M6 26 H42 V50 H6 Z" fill="#9AA0A6" ${st}/><path d="M42 26 L58 16 V40 L42 50 Z" fill="#7D838A" ${st}/><rect x="11" y="31" width="11" height="13" rx="2" fill="#4A4F55"/><rect x="26" y="31" width="11" height="13" rx="2" fill="#4A4F55"/>`),
   murs: svg(`<g ${st}><rect x="5" y="12" width="26" height="12" fill="#D2604A"/><rect x="33" y="12" width="26" height="12" fill="#C8553D"/><rect x="5" y="26" width="12" height="12" fill="#B84A34"/><rect x="19" y="26" width="26" height="12" fill="#D2604A"/><rect x="47" y="26" width="12" height="12" fill="#C8553D"/><rect x="5" y="40" width="26" height="12" fill="#C8553D"/><rect x="33" y="40" width="26" height="12" fill="#B84A34"/></g>`),
   charp: svg(`<g ${st}><path d="M6 50 L32 12 L58 50" fill="none" stroke-width="9" stroke="#1B2340"/><path d="M6 50 L32 12 L58 50" fill="none" stroke="#C48A52" stroke-width="5"/><rect x="8" y="44" width="48" height="8" fill="#A4703F"/><rect x="29" y="16" width="6" height="30" fill="#B37B46"/></g>`),
